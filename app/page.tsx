@@ -11,6 +11,7 @@ import { Backdrop } from "@/components/ui/Backdrop";
 import { BootScreen } from "@/components/ui/BootScreen";
 import { Cursor } from "@/components/ui/Cursor";
 import { DepthMeter, HudReadout } from "@/components/ui/Hud";
+import { MusicPlayer } from "@/components/ui/MusicPlayer";
 import { TopBar } from "@/components/ui/TopBar";
 import { TravelDock } from "@/components/ui/TravelDock";
 import { TravelOverlay } from "@/components/ui/TravelOverlay";
@@ -47,6 +48,7 @@ export default function Home() {
         <Footer />
       </div>
       <HudReadout />
+      <MusicPlayer />
       <DepthMeter />
       <TravelDock />
       <TravelOverlay />

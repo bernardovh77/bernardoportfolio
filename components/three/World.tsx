@@ -11,7 +11,12 @@ import {
   ToneMapping,
   Vignette,
 } from "@react-three/postprocessing";
-import { BlendFunction, type ChromaticAberrationEffect, ToneMappingMode } from "postprocessing";
+import {
+  BlendFunction,
+  type BloomEffect,
+  type ChromaticAberrationEffect,
+  ToneMappingMode,
+} from "postprocessing";
 import { type PerspectiveCamera, Vector2, Vector3 } from "three";
 import { onScrollProgress } from "@/lib/scroll";
 import { THEMES, type ThemeId } from "@/lib/themes";
@@ -86,18 +91,25 @@ function CameraRig({ theme }: { theme: ThemeId }) {
 /** Post-processing: bloom makes the neon glow; the rest adds a camera-lens feel. */
 function Effects({ theme, tier }: { theme: ThemeId; tier: QualityTier }) {
   const aberrationRef = useRef<ChromaticAberrationEffect>(null);
+  const bloomRef = useRef<BloomEffect>(null);
   const offset = useMemo(() => new Vector2(0.0006, 0.0004), []);
 
   useFrame(() => {
     const effect = aberrationRef.current;
-    if (!effect) return;
-    const warp = travelEnvelope(performance.now());
-    effect.offset.set(0.0006 + warp * 0.014, 0.0004 + warp * 0.007);
+    if (effect) {
+      const warp = travelEnvelope(performance.now());
+      effect.offset.set(0.0006 + warp * 0.014, 0.0004 + warp * 0.007);
+    }
+    // The neon glow pulses with the bass of the background music
+    const bloom = bloomRef.current;
+    const pulse = world.reducedMotion ? 0 : world.audioLevel;
+    if (bloom) bloom.intensity = THEMES[theme].bloom * (1 + pulse * 0.4);
   });
 
   return (
     <EffectComposer multisampling={tier === "high" ? 2 : 0} stencilBuffer={false}>
       <Bloom
+        ref={bloomRef}
         mipmapBlur
         luminanceThreshold={0.82}
         luminanceSmoothing={0.22}

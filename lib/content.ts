@@ -51,6 +51,27 @@ export const links = {
   linkedin: "https://www.linkedin.com/in/bernardo-vieira-de-souza-halabi/",
 };
 
+/**
+ * Background music. The file lives in public/music/ (change `src` to use
+ * another one). If the file is missing, the music player hides itself.
+ * Title and artist can be plain text, or { en, pt } to translate them.
+ */
+export const music: {
+  src: string;
+  title: string | Localized;
+  artist: string | Localized;
+  link: string;
+  volume: number;
+} = {
+  src: "/music/theme.mp3",
+  title: "Night Transit",
+  artist: { en: "Original soundtrack", pt: "Trilha sonora original" },
+  /** Optional: link to the track page, shown on the title (some licenses require it) */
+  link: "",
+  /** Playback volume, from 0 to 1 */
+  volume: 0.35,
+};
+
 /** Skill tiers: 1 = learning, 2 = comfortable, 3 = daily driver */
 export type Tier = 1 | 2 | 3;
 

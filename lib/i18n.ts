@@ -14,6 +14,11 @@ export function isLang(value: unknown): value is Lang {
   return value === "en" || value === "pt";
 }
 
+/** Text that is either the same in both languages or written in each. */
+export function localize(value: string | Localized, lang: Lang): string {
+  return typeof value === "string" ? value : value[lang];
+}
+
 const en = {
   skipToContent: "Skip to content",
   boot: {
@@ -83,6 +88,7 @@ const en = {
       "linkedin ......... open my LinkedIn",
       "travel city|desert|ocean ... switch district",
       "lang en|pt ....... switch language",
+      "music ............ play or pause the music",
       "clear ............ clear the screen",
     ],
     notFound: (cmd: string) => `command not found: ${cmd}. Type help.`,
@@ -92,6 +98,9 @@ const en = {
     langUsage: "usage: lang en | pt",
     langSet: "language set to English",
     hire: "permission granted. Bernardo is excited to talk. Run: email",
+    musicOn: (track: string) => `now playing: ${track}`,
+    musicOff: "music paused",
+    musicMissing: "no track loaded",
   },
   hud: {
     district: "District",
@@ -100,6 +109,13 @@ const en = {
     depth: "Depth",
     shortcut: "Press 1, 2 or 3",
     traveling: "Traveling to",
+  },
+  music: {
+    nowPlaying: "Now playing",
+    ready: "Starts on your first click",
+    paused: "Music paused",
+    play: "Play music",
+    pause: "Pause music",
   },
   themes: {
     city: { name: "Megacity", tagline: "Rain, towers and endless traffic" },
@@ -184,6 +200,7 @@ const pt: UiStrings = {
       "linkedin ......... abre meu LinkedIn",
       "travel city|desert|ocean ... troca de distrito",
       "lang en|pt ....... troca o idioma",
+      "music ............ toca ou pausa a música",
       "clear ............ limpa a tela",
     ],
     notFound: (cmd: string) => `comando não encontrado: ${cmd}. Digite help.`,
@@ -193,6 +210,9 @@ const pt: UiStrings = {
     langUsage: "uso: lang en | pt",
     langSet: "idioma alterado para português",
     hire: "permissão concedida. O Bernardo adoraria conversar. Rode: email",
+    musicOn: (track: string) => `tocando agora: ${track}`,
+    musicOff: "música pausada",
+    musicMissing: "nenhuma faixa carregada",
   },
   hud: {
     district: "Distrito",
@@ -201,6 +221,13 @@ const pt: UiStrings = {
     depth: "Profundidade",
     shortcut: "Aperte 1, 2 ou 3",
     traveling: "Viajando para",
+  },
+  music: {
+    nowPlaying: "Tocando agora",
+    ready: "Começa no seu primeiro clique",
+    paused: "Música pausada",
+    play: "Tocar música",
+    pause: "Pausar música",
   },
   themes: {
     city: { name: "Megacidade", tagline: "Chuva, arranha-céus e tráfego sem fim" },

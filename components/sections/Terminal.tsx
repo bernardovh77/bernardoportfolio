@@ -1,8 +1,9 @@
 "use client";
 
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
-import { links, profile } from "@/lib/content";
-import { isLang, ui } from "@/lib/i18n";
+import { links, music, profile } from "@/lib/content";
+import { musicStore } from "@/lib/music";
+import { isLang, localize, ui } from "@/lib/i18n";
 import { scrollToTarget } from "@/lib/scroll";
 import { isThemeId } from "@/lib/themes";
 import { useExperience } from "@/components/experience/ExperienceProvider";
@@ -84,6 +85,29 @@ export function Terminal() {
           print([echo, err(t.terminal.langUsage)]);
         }
         break;
+      case "music": {
+        if (musicStore.getSnapshot() === "unavailable") {
+          print([echo, err(t.terminal.musicMissing)]);
+          break;
+        }
+        const wantsOn = arg === "on" ? true : arg === "off" ? false : null;
+        const isPlaying = musicStore.getSnapshot() === "playing";
+        let nowPlaying = isPlaying;
+        if (wantsOn === null) nowPlaying = musicStore.toggle();
+        else if (wantsOn && !isPlaying) {
+          musicStore.play();
+          nowPlaying = true;
+        } else if (!wantsOn && isPlaying) {
+          musicStore.pause();
+          nowPlaying = false;
+        }
+        const credit = [music.title, music.artist]
+          .map((part) => localize(part, lang))
+          .filter(Boolean)
+          .join(" · ");
+        print([echo, out(nowPlaying ? t.terminal.musicOn(credit) : t.terminal.musicOff)]);
+        break;
+      }
       case "ls":
         print([echo, out(SECTION_IDS.join("   "))]);
         break;

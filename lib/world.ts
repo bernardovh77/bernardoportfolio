@@ -23,6 +23,8 @@ export const world = {
   reducedMotion: false,
   /** Set once the 3D world has compiled its shaders and drawn a frame */
   ready: false,
+  /** Bass level of the background music (0..1), used to pulse the neon */
+  audioLevel: 0,
 };
 
 /** 0 → 1 → 0 envelope of the current travel transition. */
