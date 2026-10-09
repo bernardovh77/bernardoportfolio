@@ -1,0 +1,228 @@
+import type { Localized } from "./i18n";
+
+/**
+ * ─────────────────────────────────────────────────────────────
+ *  YOUR CONTENT
+ *  Everything below is placeholder text. Edit it here and the
+ *  whole site updates. Each text has an English (en) and a
+ *  Portuguese (pt) version.
+ * ─────────────────────────────────────────────────────────────
+ */
+
+export const profile = {
+  name: "Bernardo",
+  handle: "bernardovh77",
+  role: {
+    en: "Fullstack developer",
+    pt: "Desenvolvedor fullstack",
+  } satisfies Localized,
+  status: {
+    en: "Open to internships",
+    pt: "Aberto a estágios",
+  } satisfies Localized,
+  intro: {
+    en: "I build web apps end to end, from the database to the last pixel. Computer Science student, looking for my first internship.",
+    pt: "Construo aplicações web de ponta a ponta, do banco de dados ao último pixel. Estudante de Ciência da Computação em busca do primeiro estágio.",
+  } satisfies Localized,
+  bio: [
+    {
+      en: "I'm a Computer Science student who fell for the web the first time I saw my code show up in a browser. Since then I've been learning how every layer fits together: interfaces, APIs, databases and the deploy that puts it all online.",
+      pt: "Sou estudante de Ciência da Computação e me apaixonei pela web na primeira vez que vi meu código aparecer no navegador. Desde então venho aprendendo como cada camada se encaixa: interfaces, APIs, bancos de dados e o deploy que coloca tudo no ar.",
+    },
+    {
+      en: "Right now I'm focused on React, Next.js and TypeScript, and I'm exploring 3D on the web (this site is my playground). I like clean code, fast pages and projects that people actually use.",
+      pt: "Hoje meu foco é React, Next.js e TypeScript, e estou explorando 3D na web (este site é meu laboratório). Gosto de código limpo, páginas rápidas e projetos que as pessoas realmente usam.",
+    },
+  ] satisfies Localized[],
+  base: { en: "Brazil", pt: "Brasil" } satisfies Localized,
+  languages: {
+    en: "Portuguese, English",
+    pt: "Português, inglês",
+  } satisfies Localized,
+  focus: {
+    en: "Web apps, APIs, 3D on the web",
+    pt: "Apps web, APIs, 3D na web",
+  } satisfies Localized,
+};
+
+export const links = {
+  email: "bernardovh77@gmail.com",
+  github: "https://github.com/bernardovh77",
+  linkedin: "https://www.linkedin.com/in/bernardo-vieira-de-souza-halabi/",
+};
+
+/** Skill tiers: 1 = learning, 2 = comfortable, 3 = daily driver */
+export type Tier = 1 | 2 | 3;
+
+export type SkillGroup = {
+  id: string;
+  title: Localized;
+  skills: { name: string; tier: Tier }[];
+};
+
+export const skillGroups: SkillGroup[] = [
+  {
+    id: "frontend",
+    title: { en: "Frontend", pt: "Frontend" },
+    skills: [
+      { name: "HTML & CSS", tier: 3 },
+      { name: "JavaScript", tier: 3 },
+      { name: "TypeScript", tier: 2 },
+      { name: "React", tier: 2 },
+      { name: "Next.js", tier: 2 },
+      { name: "Tailwind CSS", tier: 2 },
+      { name: "Three.js", tier: 1 },
+    ],
+  },
+  {
+    id: "backend",
+    title: { en: "Backend", pt: "Backend" },
+    skills: [
+      { name: "Node.js", tier: 2 },
+      { name: "REST APIs", tier: 2 },
+      { name: "Python", tier: 2 },
+      { name: "SQL", tier: 2 },
+      { name: "PostgreSQL", tier: 1 },
+      { name: "Prisma", tier: 1 },
+    ],
+  },
+  {
+    id: "tools",
+    title: { en: "Tools", pt: "Ferramentas" },
+    skills: [
+      { name: "Git & GitHub", tier: 3 },
+      { name: "VS Code", tier: 3 },
+      { name: "Linux / WSL", tier: 2 },
+      { name: "Vercel", tier: 2 },
+      { name: "Figma", tier: 1 },
+      { name: "Docker", tier: 1 },
+    ],
+  },
+];
+
+export type Project = {
+  id: string;
+  title: string;
+  year: string;
+  summary: Localized;
+  stack: string[];
+  /** Link to the source code (leave empty to hide the button) */
+  repo?: string;
+  /** Link to the live site (leave empty to hide the button) */
+  live?: string;
+  /** Which generated cover art to use */
+  art: "skyline" | "orbit" | "wave" | "grid";
+};
+
+export const projects: Project[] = [
+  {
+    id: "portfolio",
+    title: "Neon Portfolio",
+    year: "2026",
+    summary: {
+      en: "This site. A 3D portfolio with three districts you can travel between, built with Next.js, React Three Fiber and custom shaders.",
+      pt: "Este site. Um portfólio 3D com três distritos para visitar, feito com Next.js, React Three Fiber e shaders próprios.",
+    },
+    stack: ["Next.js", "Three.js", "GSAP", "TypeScript"],
+    repo: "https://github.com/bernardovh77/bernardoportfolio",
+    live: "https://bernardoportfolio-bay.vercel.app",
+    art: "skyline",
+  },
+  {
+    id: "ledger",
+    title: "Pocket Ledger",
+    year: "2026",
+    summary: {
+      en: "Placeholder project. A personal finance dashboard that turns bank exports into clear monthly charts.",
+      pt: "Projeto de exemplo. Um painel de finanças pessoais que transforma extratos em gráficos mensais claros.",
+    },
+    stack: ["React", "Node.js", "PostgreSQL"],
+    repo: "https://github.com/bernardovh77",
+    art: "grid",
+  },
+  {
+    id: "studygroup",
+    title: "Study Sync",
+    year: "2025",
+    summary: {
+      en: "Placeholder project. Helps classmates find study partners by course and schedule, with real-time chat.",
+      pt: "Projeto de exemplo. Ajuda colegas a encontrar parceiros de estudo por matéria e horário, com chat em tempo real.",
+    },
+    stack: ["Next.js", "TypeScript", "Prisma"],
+    repo: "https://github.com/bernardovh77",
+    art: "orbit",
+  },
+  {
+    id: "visualizer",
+    title: "Algo Visualizer",
+    year: "2025",
+    summary: {
+      en: "Placeholder project. Watch sorting and pathfinding algorithms run step by step, with adjustable speed.",
+      pt: "Projeto de exemplo. Veja algoritmos de ordenação e busca de caminhos rodando passo a passo, com velocidade ajustável.",
+    },
+    stack: ["TypeScript", "Canvas API"],
+    repo: "https://github.com/bernardovh77",
+    art: "wave",
+  },
+];
+
+export type JourneyEntry = {
+  id: string;
+  year: string;
+  title: Localized;
+  text: Localized;
+  /** Marks the entry that is still ahead */
+  upcoming?: boolean;
+};
+
+export const journey: JourneyEntry[] = [
+  {
+    id: "first-code",
+    year: "2023",
+    title: { en: "First lines of code", pt: "Primeiras linhas de código" },
+    text: {
+      en: "Placeholder. Built tiny games and pages just to see what would happen.",
+      pt: "Exemplo. Fiz jogos e páginas pequenas só para ver o que acontecia.",
+    },
+  },
+  {
+    id: "first-site",
+    year: "2025",
+    title: { en: "First full website", pt: "Primeiro site completo" },
+    text: {
+      en: "Placeholder. Designed, built and deployed a site from scratch for a real person.",
+      pt: "Exemplo. Projetei, construí e publiquei um site do zero para uma pessoa de verdade.",
+    },
+  },
+  {
+    id: "university",
+    year: "2026",
+    title: {
+      en: "Started Computer Science",
+      pt: "Comecei Ciência da Computação",
+    },
+    text: {
+      en: "Placeholder. Algorithms, data structures and a lot of late nights.",
+      pt: "Exemplo. Algoritmos, estruturas de dados e muitas noites viradas.",
+    },
+  },
+  {
+    id: "portfolio",
+    year: "2026",
+    title: { en: "Launched this portfolio", pt: "Lancei este portfólio" },
+    text: {
+      en: "Placeholder. My first serious 3D project on the web.",
+      pt: "Exemplo. Meu primeiro projeto sério de 3D na web.",
+    },
+  },
+  {
+    id: "internship",
+    year: "2027",
+    title: { en: "First internship", pt: "Primeiro estágio" },
+    text: {
+      en: "Looking for a team where I can learn fast and ship real things.",
+      pt: "Procurando um time onde eu possa aprender rápido e entregar coisas reais.",
+    },
+    upcoming: true,
+  },
+];

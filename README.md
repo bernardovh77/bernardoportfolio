@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bernardo's portfolio
 
-## Getting Started
+A cyberpunk portfolio built with Next.js, React Three Fiber and GSAP. The background is a live 3D world with three districts visitors can travel between:
 
-First, run the development server:
+- **Megacity**: rain, towers, neon signs and flying traffic over a wet street
+- **Synth Desert**: a neon highway into a striped sun, with wireframe mountains
+- **Data Ocean**: glowing waves, code-rain towers and a holographic moon
+
+The site is available in English and Portuguese.
+
+## Run it locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Edit your content
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Almost everything you will want to change lives in **`lib/content.ts`**: your intro, bio, skills, projects, journey and links. Each text has an English (`en`) and Portuguese (`pt`) version.
 
-## Learn More
+Interface text (menu labels, buttons, the terminal) is in `lib/i18n.ts`.
 
-To learn more about Next.js, take a look at the following resources:
+## Where things are
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Path | What it does |
+| --- | --- |
+| `app/page.tsx` | Puts the page together |
+| `app/globals.css` | All the styles, including the colors of each district |
+| `components/sections/` | Hero, About, Skills, Work, Journey, Contact, Footer |
+| `components/ui/` | Top bar, district switcher, boot screen, cursor, HUD |
+| `components/three/` | The 3D world and the three district scenes |
+| `lib/themes.ts` | District colors used by the 3D scenes |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Keyboard shortcuts
 
-## Deploy on Vercel
+Press `1`, `2` or `3` to travel between districts. The terminal in the Contact section accepts commands too; type `help`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Every push to `main` deploys automatically on Vercel.
+
+Fonts: Tektur and Martian Mono, both under the SIL Open Font License (see `app/fonts/`).
