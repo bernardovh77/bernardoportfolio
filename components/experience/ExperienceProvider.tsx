@@ -100,12 +100,14 @@ export function ExperienceProvider({ children }: { children: ReactNode }) {
     preferencesStore.set({ lang });
   }, []);
 
-  // Keyboard shortcuts: 1, 2, 3 travel between districts
+  // Keyboard shortcuts: the number keys travel between districts (1 = first one)
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey || isTypingTarget(event.target)) return;
-      const index = ["1", "2", "3"].indexOf(event.key);
-      if (index >= 0) travelTo(THEME_IDS[index]);
+      const index = Number(event.key) - 1;
+      if (Number.isInteger(index) && index >= 0 && index < THEME_IDS.length) {
+        travelTo(THEME_IDS[index]);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

@@ -144,6 +144,17 @@ export function DistrictIcon({ theme, ...props }: IconProps & { theme: ThemeId }
       </svg>
     );
   }
+  if (theme === "underworks") {
+    // A striped road barrier with a warning light on top
+    return (
+      <svg {...base(props)}>
+        <path d="M3 10h18v4.5H3z" />
+        <path d="m8 10-2.6 4.5M13 10l-2.6 4.5M18 10l-2.6 4.5" />
+        <path d="M6 14.5V20M18 14.5V20M4.5 20h3M16.5 20h3" />
+        <path d="M10.2 10V8.4a1.8 1.8 0 0 1 3.6 0V10M12 3.5v1.2M8.6 5l.8.8M15.4 5l-.8.8" />
+      </svg>
+    );
+  }
   return (
     <svg {...base(props)}>
       <circle cx="17" cy="6" r="3" />

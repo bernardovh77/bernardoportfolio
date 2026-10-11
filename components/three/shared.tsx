@@ -62,7 +62,7 @@ export const CJK_FONT_STACK =
   '"Yu Gothic", "YuGothic", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", "Meiryo", sans-serif';
 
 /** Reads a font-family list that next/font exposes as a CSS variable. */
-function cssFontFamily(variable: string, fallback: string) {
+export function cssFontFamily(variable: string, fallback: string) {
   try {
     const value = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
     return value ? `${value}, ${fallback}` : fallback;
@@ -71,7 +71,7 @@ function cssFontFamily(variable: string, fallback: string) {
   }
 }
 
-function makeTexture(canvas: HTMLCanvasElement) {
+export function makeTexture(canvas: HTMLCanvasElement) {
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
   texture.minFilter = LinearMipmapLinearFilter;

@@ -31,11 +31,13 @@ import {
 import CityScene, { cityCamera } from "./scenes/CityScene";
 import DesertScene, { desertCamera } from "./scenes/DesertScene";
 import OceanScene, { oceanCamera } from "./scenes/OceanScene";
+import UnderworksScene, { underworksCamera } from "./scenes/UnderworksScene";
 
 const CAMERA_PATHS = {
   city: cityCamera,
   desert: desertCamera,
   ocean: oceanCamera,
+  underworks: underworksCamera,
 } satisfies Record<ThemeId, unknown>;
 
 const BASE_FOV = 55;
@@ -213,6 +215,7 @@ export default function World({ theme }: { theme: ThemeId }) {
       <CityScene active={theme === "city"} tier={tier} />
       <DesertScene active={theme === "desert"} tier={tier} />
       <OceanScene active={theme === "ocean"} tier={tier} />
+      <UnderworksScene active={theme === "underworks"} tier={tier} />
       <CameraRig theme={theme} />
       <Effects theme={theme} tier={tier} />
       <Warmup />

@@ -141,8 +141,8 @@ export const projects: Project[] = [
     title: "Neon Portfolio",
     year: "2026",
     summary: {
-      en: "This site. A 3D portfolio with three districts you can travel between, built with Next.js, React Three Fiber and custom shaders.",
-      pt: "Este site. Um portfólio 3D com três distritos para visitar, feito com Next.js, React Three Fiber e shaders próprios.",
+      en: "This site. A 3D portfolio with four districts you can travel between, built with Next.js, React Three Fiber and custom shaders.",
+      pt: "Este site. Um portfólio 3D com quatro distritos para visitar, feito com Next.js, React Three Fiber e shaders próprios.",
     },
     stack: ["Next.js", "Three.js", "GSAP", "TypeScript"],
     repo: "https://github.com/bernardovh77/bernardoportfolio",
@@ -184,6 +184,72 @@ export const projects: Project[] = [
     stack: ["TypeScript", "Canvas API"],
     repo: "https://github.com/bernardovh77",
     art: "wave",
+  },
+];
+
+export type WipStatus = "blueprint" | "building" | "testing";
+
+export type WipProject = {
+  id: string;
+  title: string;
+  summary: Localized;
+  stack: string[];
+  /** How far along it is, from 0 to 100 */
+  progress: number;
+  /** blueprint = still planning, building = coding it, testing = almost there */
+  status: WipStatus;
+  /** When you expect to finish it */
+  eta: Localized;
+  /** Link to the source code (leave empty to hide the button) */
+  repo?: string;
+  /** Which blueprint drawing to use on the card */
+  art: "tower" | "dome" | "gear";
+};
+
+/**
+ * Projects still under development. They show up in the Work section
+ * while the visitor is in the Underworks district.
+ */
+export const wipProjects: WipProject[] = [
+  {
+    id: "campus-map",
+    title: "Campus Map",
+    summary: {
+      en: "Placeholder project. An interactive map of the university with class schedules and a room finder.",
+      pt: "Projeto de exemplo. Um mapa interativo da universidade com horários de aula e busca de salas.",
+    },
+    stack: ["Next.js", "Leaflet", "PostgreSQL"],
+    progress: 45,
+    status: "building",
+    eta: { en: "Early 2027", pt: "Início de 2027" },
+    repo: "https://github.com/bernardovh77",
+    art: "tower",
+  },
+  {
+    id: "chat-relay",
+    title: "Chat Relay",
+    summary: {
+      en: "Placeholder project. A real-time chat server with rooms, typing indicators and message history.",
+      pt: "Projeto de exemplo. Um servidor de chat em tempo real com salas, indicador de digitação e histórico.",
+    },
+    stack: ["Node.js", "WebSockets", "Redis"],
+    progress: 70,
+    status: "testing",
+    eta: { en: "Late 2026", pt: "Fim de 2026" },
+    art: "dome",
+  },
+  {
+    id: "habit-engine",
+    title: "Habit Engine",
+    summary: {
+      en: "Placeholder project. A habit tracker with streaks, reminders and a small public API.",
+      pt: "Projeto de exemplo. Um rastreador de hábitos com sequências, lembretes e uma pequena API pública.",
+    },
+    stack: ["React Native", "TypeScript", "Supabase"],
+    progress: 15,
+    status: "blueprint",
+    eta: { en: "2027", pt: "2027" },
+    art: "gear",
   },
 ];
 

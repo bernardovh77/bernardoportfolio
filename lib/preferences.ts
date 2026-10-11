@@ -1,5 +1,5 @@
 import { DEFAULT_LANG, isLang, type Lang } from "./i18n";
-import { DEFAULT_THEME, isThemeId, STORAGE_KEYS, type ThemeId } from "./themes";
+import { DEFAULT_THEME, isThemeId, STORAGE_KEYS, THEME_IDS, type ThemeId } from "./themes";
 
 /**
  * Visitor preferences (district + language) as a tiny external store.
@@ -67,4 +67,4 @@ export const preferencesStore = {
 };
 
 /** Inline script that runs before the first paint (see app/layout.tsx). */
-export const preferencesInitScript = `(function(){try{var d=document.documentElement;var t=localStorage.getItem("${STORAGE_KEYS.theme}");if(t==="city"||t==="desert"||t==="ocean"){d.dataset.theme=t}var l=localStorage.getItem("${STORAGE_KEYS.lang}");if(l!=="en"&&l!=="pt"){l=(navigator.language||"").toLowerCase().indexOf("pt")===0?"pt":"en"}d.dataset.lang=l;d.lang=l==="pt"?"pt-BR":"en";if(window.matchMedia("(prefers-reduced-motion: reduce)").matches){d.dataset.motion="reduced"}}catch(e){}})();`;
+export const preferencesInitScript = `(function(){try{var d=document.documentElement;var t=localStorage.getItem("${STORAGE_KEYS.theme}");if(${JSON.stringify(THEME_IDS)}.indexOf(t)>=0){d.dataset.theme=t}var l=localStorage.getItem("${STORAGE_KEYS.lang}");if(l!=="en"&&l!=="pt"){l=(navigator.language||"").toLowerCase().indexOf("pt")===0?"pt":"en"}d.dataset.lang=l;d.lang=l==="pt"?"pt-BR":"en";if(window.matchMedia("(prefers-reduced-motion: reduce)").matches){d.dataset.motion="reduced"}}catch(e){}})();`;
