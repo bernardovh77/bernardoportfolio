@@ -78,20 +78,20 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
     fogDensity: 0.0062,
     bloom: 1.45,
   },
-  // Beneath the Megacity: where unfinished projects are still being built
+  // Beneath the Megacity: a foundry shaft where unfinished projects are still being built
   underworks: {
     id: "underworks",
     code: "B-04",
     coords: "35.6895N 139.6917E -128M",
     palette: {
-      a: "#ffb21f",
-      b: "#ff3347",
-      signal: "#5ad7ff",
-      sky: "#030202",
-      fog: "#120c08",
+      a: "#f0902f",
+      b: "#d23a22",
+      signal: "#9fd6ff",
+      sky: "#070504",
+      fog: "#120d09",
     },
-    fogDensity: 0.0105,
-    bloom: 1.55,
+    fogDensity: 0.0071,
+    bloom: 1.05,
   },
 };
 

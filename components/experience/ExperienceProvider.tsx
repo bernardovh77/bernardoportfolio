@@ -14,6 +14,7 @@ import {
 } from "react";
 import { type Lang, ui, type UiStrings } from "@/lib/i18n";
 import { applyPreferencesToDocument, preferencesStore } from "@/lib/preferences";
+import { scrollToTarget } from "@/lib/scroll";
 import { THEME_IDS, type ThemeId } from "@/lib/themes";
 import { TRAVEL_DURATION, TRAVEL_SWAP_AT, world } from "@/lib/world";
 
@@ -25,7 +26,11 @@ type ExperienceValue = {
   t: UiStrings;
   /** Destination while a travel transition is running */
   traveling: ThemeId | null;
+  /** Where the current travel started */
+  travelOrigin: ThemeId | null;
   travelTo: (theme: ThemeId) => void;
+  /** Leaves the Underworks for the last district visited on the surface */
+  returnToSurface: () => void;
   setLang: (lang: Lang) => void;
 };
 
@@ -33,6 +38,11 @@ const ExperienceContext = createContext<ExperienceValue | null>(null);
 
 function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** The Underworks has its own page, so crossing to or from it starts at the top. */
+function changesPage(from: ThemeId, to: ThemeId) {
+  return (from === "underworks") !== (to === "underworks");
 }
 
 function isTypingTarget(target: EventTarget | null) {
@@ -47,8 +57,14 @@ export function ExperienceProvider({ children }: { children: ReactNode }) {
     preferencesStore.getServerSnapshot,
   );
   const [traveling, setTraveling] = useState<ThemeId | null>(null);
+  const [travelOrigin, setTravelOrigin] = useState<ThemeId | null>(null);
   const timers = useRef<number[]>([]);
   const travelingRef = useRef<ThemeId | null>(null);
+  const surfaceRef = useRef<ThemeId>("city");
+
+  useEffect(() => {
+    if (prefs.theme !== "underworks") surfaceRef.current = prefs.theme;
+  }, [prefs.theme]);
 
   // React's dev remount can clear attributes set by the inline script, so re-apply them.
   // Read from the store (not `prefs`), which still holds the server default during hydration.
@@ -76,25 +92,31 @@ export function ExperienceProvider({ children }: { children: ReactNode }) {
     const current = preferencesStore.getSnapshot().theme;
     if (travelingRef.current || next === current) return;
 
-    if (prefersReducedMotion()) {
+    const swap = () => {
+      if (changesPage(current, next)) scrollToTarget(0, true);
       preferencesStore.set({ theme: next });
+    };
+
+    if (prefersReducedMotion()) {
+      swap();
       return;
     }
 
     travelingRef.current = next;
     setTraveling(next);
+    setTravelOrigin(current);
     world.travelStart = performance.now();
     timers.current.push(
-      window.setTimeout(
-        () => preferencesStore.set({ theme: next }),
-        TRAVEL_DURATION * TRAVEL_SWAP_AT,
-      ),
+      window.setTimeout(swap, TRAVEL_DURATION * TRAVEL_SWAP_AT),
       window.setTimeout(() => {
         travelingRef.current = null;
         setTraveling(null);
+        setTravelOrigin(null);
       }, TRAVEL_DURATION),
     );
   }, []);
+
+  const returnToSurface = useCallback(() => travelTo(surfaceRef.current), [travelTo]);
 
   const setLang = useCallback((lang: Lang) => {
     preferencesStore.set({ lang });
@@ -119,10 +141,12 @@ export function ExperienceProvider({ children }: { children: ReactNode }) {
       lang: prefs.lang,
       t: ui[prefs.lang],
       traveling,
+      travelOrigin,
       travelTo,
+      returnToSurface,
       setLang,
     }),
-    [prefs, traveling, travelTo, setLang],
+    [prefs, traveling, travelOrigin, travelTo, returnToSurface, setLang],
   );
 
   return <ExperienceContext.Provider value={value}>{children}</ExperienceContext.Provider>;

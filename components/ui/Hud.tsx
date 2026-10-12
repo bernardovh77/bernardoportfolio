@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import { onScrollProgress } from "@/lib/scroll";
 import { THEMES } from "@/lib/themes";
+import { depthMeters, SHAFT_DEPTH, SITE_SECTION_IDS, shaftPosition, siteY } from "@/lib/underworks";
+import { world } from "@/lib/world";
 import { useExperience } from "@/components/experience/ExperienceProvider";
 import { SECTION_IDS } from "./TopBar";
 
@@ -72,25 +74,40 @@ export function HudReadout() {
   );
 }
 
-/** Right-edge depth gauge showing how far down the page you are. */
+/**
+ * Right-edge depth gauge showing how far down the page you are.
+ * In the Underworks it reads the real depth of the shaft, in meters.
+ */
 export function DepthMeter() {
-  const { t } = useExperience();
+  const { t, theme } = useExperience();
+  const underworks = theme === "underworks";
   const fillRef = useRef<HTMLDivElement>(null);
   const valueRef = useRef<HTMLSpanElement>(null);
   const ticksRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const update = (progress: number) => {
-      if (fillRef.current) fillRef.current.style.transform = `scaleY(${progress})`;
-      if (valueRef.current)
-        valueRef.current.textContent = String(Math.round(progress * 100)).padStart(3, "0");
+      let level = progress;
+      let value = Math.round(progress * 100);
+      if (underworks) {
+        const { y } = shaftPosition(progress);
+        level = Math.min(1, -y / SHAFT_DEPTH);
+        value = depthMeters(y);
+      }
+      if (fillRef.current) fillRef.current.style.transform = `scaleY(${level})`;
+      if (valueRef.current) valueRef.current.textContent = String(value).padStart(3, "0");
     };
     const placeTicks = () => {
       const container = ticksRef.current;
       if (!container) return;
       const max = document.documentElement.scrollHeight - window.innerHeight;
       if (max <= 0) return;
-      container.querySelectorAll<HTMLElement>("[data-tick]").forEach((tick) => {
+      container.querySelectorAll<HTMLElement>("[data-tick]").forEach((tick, index) => {
+        if (underworks) {
+          // Each site at its depth in the shaft
+          tick.style.top = `${(-siteY(index) / SHAFT_DEPTH) * 100}%`;
+          return;
+        }
         const section = document.getElementById(tick.dataset.tick ?? "");
         if (!section) return;
         const top = section.getBoundingClientRect().top + window.scrollY - 72;
@@ -98,6 +115,7 @@ export function DepthMeter() {
       });
     };
     placeTicks();
+    update(world.scroll);
     const resize = new ResizeObserver(placeTicks);
     resize.observe(document.body);
     const unsubscribe = onScrollProgress((progress) => update(progress));
@@ -105,7 +123,9 @@ export function DepthMeter() {
       unsubscribe();
       resize.disconnect();
     };
-  }, []);
+  }, [underworks]);
+
+  const ticks: readonly string[] = underworks ? SITE_SECTION_IDS : SECTION_IDS;
 
   return (
     <div className="depth" aria-hidden="true">
@@ -113,7 +133,7 @@ export function DepthMeter() {
       <div className="depth__rail">
         <div ref={fillRef} className="depth__fill" />
         <div ref={ticksRef} className="depth__ticks">
-          {SECTION_IDS.map((id) => (
+          {ticks.map((id) => (
             <span key={id} data-tick={id} className="depth__tick" />
           ))}
         </div>
@@ -121,6 +141,7 @@ export function DepthMeter() {
       <span ref={valueRef} className="depth__value">
         000
       </span>
+      {underworks && <span className="depth__unit">m</span>}
     </div>
   );
 }

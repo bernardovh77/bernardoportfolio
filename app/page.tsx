@@ -1,12 +1,6 @@
 import { ExperienceProvider } from "@/components/experience/ExperienceProvider";
 import { SmoothScroll } from "@/components/experience/SmoothScroll";
-import { About } from "@/components/sections/About";
-import { Contact } from "@/components/sections/Contact";
-import { Footer } from "@/components/sections/Footer";
-import { Hero } from "@/components/sections/Hero";
-import { Journey } from "@/components/sections/Journey";
-import { Skills } from "@/components/sections/Skills";
-import { Work } from "@/components/sections/Work";
+import { DistrictContent } from "@/components/sections/DistrictContent";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { BootScreen } from "@/components/ui/BootScreen";
 import { Cursor } from "@/components/ui/Cursor";
@@ -37,15 +31,7 @@ export default function Home() {
       <SvgDefs />
       <TopBar />
       <div className="page">
-        <main id="main" tabIndex={-1}>
-          <Hero />
-          <About />
-          <Skills />
-          <Work />
-          <Journey />
-          <Contact />
-        </main>
-        <Footer />
+        <DistrictContent />
       </div>
       <HudReadout />
       <MusicPlayer />

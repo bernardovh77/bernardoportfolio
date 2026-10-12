@@ -3,17 +3,19 @@
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { profile } from "@/lib/content";
 import { lockScroll, onScrollProgress, scrollToTarget } from "@/lib/scroll";
+import { THEMES } from "@/lib/themes";
 import { useExperience } from "@/components/experience/ExperienceProvider";
-import { CloseIcon, LogoMark, MenuIcon } from "./Icons";
+import { ArrowUpIcon, CloseIcon, LogoMark, MenuIcon } from "./Icons";
 import { LangSwitch } from "./LangSwitch";
 
 export const SECTION_IDS = ["about", "skills", "work", "journey", "contact"] as const;
 type SectionId = (typeof SECTION_IDS)[number];
 
 /** Highlights the nav link of the section currently in view. */
-function useActiveSection() {
+function useActiveSection(enabled: boolean) {
   const [active, setActive] = useState<SectionId | null>(null);
   useEffect(() => {
+    if (!enabled) return;
     const elements = SECTION_IDS.map((id) => document.getElementById(id)).filter(
       (el): el is HTMLElement => Boolean(el),
     );
@@ -35,14 +37,17 @@ function useActiveSection() {
       observer.disconnect();
       window.removeEventListener("scroll", onTop);
     };
-  }, []);
+  }, [enabled]);
   return active;
 }
 
 export function TopBar() {
-  const { t } = useExperience();
-  const active = useActiveSection();
+  const { t, theme, traveling, returnToSurface } = useExperience();
+  // Down in the Underworks there are no sections to jump to, only the way back up
+  const underworks = theme === "underworks";
+  const active = useActiveSection(!underworks);
   const [menuOpen, setMenuOpen] = useState(false);
+  const open = menuOpen && !underworks;
   const headerRef = useRef<HTMLElement>(null);
 
   // Solid background once the page scrolls
@@ -55,7 +60,7 @@ export function TopBar() {
   }, []);
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!open) return;
     lockScroll(true);
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMenuOpen(false);
@@ -65,7 +70,7 @@ export function TopBar() {
       window.removeEventListener("keydown", onKey);
       lockScroll(false);
     };
-  }, [menuOpen]);
+  }, [open]);
 
   const goTo = (id: string) => {
     setMenuOpen(false);
@@ -74,7 +79,7 @@ export function TopBar() {
   };
 
   return (
-    <header ref={headerRef} className="topbar" data-menu={menuOpen ? "open" : "closed"}>
+    <header ref={headerRef} className="topbar" data-menu={open ? "open" : "closed"}>
       <a
         className="skip-link"
         href="#main"
@@ -84,17 +89,22 @@ export function TopBar() {
       </a>
       <a
         className="topbar__brand"
-        href="#top"
+        href="#main"
         onClick={(event) => {
           event.preventDefault();
-          goTo("top");
+          setMenuOpen(false);
+          requestAnimationFrame(() => scrollToTarget(0));
         }}
       >
         <LogoMark size={28} />
-        <span className="topbar__name">{profile.name}</span>
+        {underworks ? (
+          <span className="topbar__sector">{THEMES.underworks.code}</span>
+        ) : (
+          <span className="topbar__name">{profile.name}</span>
+        )}
       </a>
 
-      <nav className="topbar__nav" aria-label="Main">
+      <nav className="topbar__nav" aria-label="Main" hidden={underworks}>
         <ul>
           {SECTION_IDS.map((id) => (
             <li key={id}>
@@ -116,19 +126,37 @@ export function TopBar() {
 
       <div className="topbar__tools">
         <LangSwitch />
-        <button
-          type="button"
-          className="topbar__menu-button"
-          aria-expanded={menuOpen}
-          aria-controls="mobile-menu"
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          {menuOpen ? <CloseIcon size={20} /> : <MenuIcon size={20} />}
-          <span className="sr-only">{menuOpen ? t.nav.close : t.nav.menu}</span>
-        </button>
+        {underworks ? (
+          <button
+            type="button"
+            className="topbar__surface"
+            onClick={returnToSurface}
+            disabled={Boolean(traveling)}
+            aria-label={t.underworks.surface}
+          >
+            <ArrowUpIcon size={16} />
+            <span className="topbar__surface-long" aria-hidden="true">
+              {t.underworks.surface}
+            </span>
+            <span className="topbar__surface-short" aria-hidden="true">
+              {t.underworks.surfaceShort}
+            </span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="topbar__menu-button"
+            aria-expanded={open}
+            aria-controls="mobile-menu"
+            onClick={() => setMenuOpen((value) => !value)}
+          >
+            {open ? <CloseIcon size={20} /> : <MenuIcon size={20} />}
+            <span className="sr-only">{open ? t.nav.close : t.nav.menu}</span>
+          </button>
+        )}
       </div>
 
-      <div id="mobile-menu" className="mobile-menu" hidden={!menuOpen}>
+      <div id="mobile-menu" className="mobile-menu" hidden={!open}>
         <nav aria-label="Mobile">
           <ul>
             {SECTION_IDS.map((id, index) => (

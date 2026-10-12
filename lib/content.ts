@@ -207,8 +207,9 @@ export type WipProject = {
 };
 
 /**
- * Projects still under development. They show up in the Work section
- * while the visitor is in the Underworks district.
+ * Projects still under development. They live in the Underworks: each one
+ * gets a work order on that page and a construction site in the 3D shaft,
+ * built up to its progress.
  */
 export const wipProjects: WipProject[] = [
   {

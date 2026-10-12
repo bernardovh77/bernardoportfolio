@@ -18,10 +18,17 @@ const BANDS = Array.from({ length: 9 }, (_, i) => ({
 
 /** The full-screen glitch shown while travelling between districts. */
 export function TravelOverlay() {
-  const { traveling, t } = useExperience();
+  const { traveling, travelOrigin, t } = useExperience();
   if (!traveling) return null;
   const info = t.themes[traveling];
   const config = THEMES[traveling];
+  // Going down into the Underworks, or climbing back out of it
+  const label =
+    traveling === "underworks"
+      ? t.hud.descending
+      : travelOrigin === "underworks"
+        ? t.hud.surfacing
+        : t.hud.traveling;
 
   return (
     <div
@@ -48,7 +55,7 @@ export function TravelOverlay() {
       </div>
       <div className="travel__center">
         <p className="travel__label">
-          {t.hud.traveling} <span className="travel__code">{config.code}</span>
+          {label} <span className="travel__code">{config.code}</span>
         </p>
         <ScrambleText
           as="p"

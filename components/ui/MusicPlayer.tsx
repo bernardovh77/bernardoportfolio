@@ -22,6 +22,11 @@ const BANDS = [
 // How fast each bar re-adapts to its band's loudest and quietest moments (per second)
 const ADAPT = 0.15;
 
+// Down in the Underworks the music sounds like it comes through the walls
+const OPEN_HZ = 20000;
+const MUFFLED_HZ = 1500;
+let muffled = false;
+
 // Input that can give a page permission to play sound. Phones only grant it
 // when the finger lifts, so listening to pointerdown alone isn't enough.
 const GESTURES = ["pointerdown", "pointerup", "touchend", "click", "keydown"] as const;
@@ -29,6 +34,7 @@ const GESTURES = ["pointerdown", "pointerup", "touchend", "click", "keydown"] as
 type Graph = {
   context: AudioContext;
   gain: GainNode;
+  filter: BiquadFilterNode;
   analyser: AnalyserNode;
   data: Uint8Array<ArrayBuffer>;
   /** First and last analyser bin of each equalizer band */
@@ -57,10 +63,15 @@ function getGraph(audio: HTMLAudioElement): Graph | null {
     analyser.minDecibels = -90;
     analyser.maxDecibels = -22;
     analyser.smoothingTimeConstant = 0.7;
-    // The analyser passes the sound through unchanged, so placing it before
-    // the gain measures the track itself, whatever the volume.
+    const filter = context.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.Q.value = 0.6;
+    filter.frequency.value = muffled ? MUFFLED_HZ : OPEN_HZ;
+    // The analyser passes the sound through unchanged, so placing it first
+    // measures the track itself, whatever the volume or the filter.
     source.connect(analyser);
-    analyser.connect(gain);
+    analyser.connect(filter);
+    filter.connect(gain);
     gain.connect(context.destination);
     const binHz = context.sampleRate / analyser.fftSize;
     const last = analyser.frequencyBinCount - 1;
@@ -71,6 +82,7 @@ function getGraph(audio: HTMLAudioElement): Graph | null {
     const graph = {
       context,
       gain,
+      filter,
       analyser,
       data: new Uint8Array(analyser.frequencyBinCount),
       bands,
@@ -89,7 +101,7 @@ function getGraph(audio: HTMLAudioElement): Graph | null {
  * click, tap or key press, fades in, and remembers if the visitor mutes it.
  */
 export function MusicPlayer() {
-  const { t, lang } = useExperience();
+  const { t, lang, theme } = useExperience();
   const status = useSyncExternalStore(
     musicStore.subscribe,
     musicStore.getSnapshot,
@@ -290,6 +302,19 @@ export function MusicPlayer() {
       musicStore.setStatus("loading");
     };
   }, []);
+
+  // Muffle the music underground, open it up again on the surface
+  useEffect(() => {
+    muffled = theme === "underworks";
+    const audio = audioRef.current;
+    const graph = audio ? graphs.get(audio) : undefined;
+    if (!graph) return;
+    graph.filter.frequency.setTargetAtTime(
+      muffled ? MUFFLED_HZ : OPEN_HZ,
+      graph.context.currentTime,
+      0.35,
+    );
+  }, [theme]);
 
   const playing = status === "playing";
   const label = playing ? t.music.nowPlaying : status === "ready" ? t.music.ready : t.music.paused;

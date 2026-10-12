@@ -24,7 +24,7 @@ const martian = localFont({
 export const metadata: Metadata = {
   title: "Bernardo | Fullstack Developer",
   description:
-    "Portfolio of Bernardo, a fullstack developer and Computer Science student. Explore four neon districts in 3D.",
+    "Portfolio of Bernardo, a fullstack developer and Computer Science student. Explore four 3D districts, from neon streets to the foundry underneath.",
 };
 
 export const viewport: Viewport = {

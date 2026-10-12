@@ -74,17 +74,21 @@ html[data-theme="ocean"] {
   --fog: #04142a;
 }
 
-/* The Underworks: sodium work lights, dying red neon, cyan blueprints */
+/* The Underworks: soot, rust and furnace light, with arc-blue for the blueprints */
 html[data-theme="underworks"] {
-  --void: #050403;
-  --abyss: #17100a;
-  --ink: #f2ece4;
-  --haze: #a39a8d;
-  --wire: #3b2e22;
-  --a: #ffb21f;
-  --b: #ff3347;
-  --signal: #5ad7ff;
-  --fog: #120c08;
+  --void: #070504;
+  --abyss: #16100b;
+  --ink: #ece4d8;
+  --haze: #a0958a;
+  --wire: #3d3127;
+  --a: #f0902f;
+  --b: #d23a22;
+  --signal: #9fd6ff;
+  --fog: #120d09;
+  --line: color-mix(in oklab, var(--a) 16%, transparent);
+  --line-strong: color-mix(in oklab, var(--a) 38%, transparent);
+  --tube: #ffe1b5;
+  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.47 0 0 0 0 0.4 0 0 0 0.16 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
 /* ──────────────────────────────── Base ─────────────────────────────── */
@@ -484,10 +488,55 @@ html.is-locked {
     transform: scaleX(1);
   }
   .topbar__tools {
+    grid-column: -2 / -1;
     display: flex;
     align-items: center;
     justify-content: end;
     gap: 10px;
+  }
+  /* Underworks: the sector code instead of the name, and a way back up */
+  .topbar__sector {
+    color: var(--ink);
+    font-family: var(--font-head);
+    font-size: 19px;
+    font-weight: 800;
+    font-stretch: 85%;
+    letter-spacing: 0.08em;
+  }
+  .topbar__surface {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    height: 40px;
+    padding: 0 16px 0 13px;
+    color: var(--ink);
+    font-size: 12.5px;
+    font-stretch: 100%;
+    border: 1px solid var(--line-strong);
+    background: color-mix(in oklab, var(--void) 70%, transparent);
+    clip-path: polygon(
+      0 0,
+      calc(100% - 10px) 0,
+      100% 10px,
+      100% 100%,
+      10px 100%,
+      0 calc(100% - 10px)
+    );
+    transition:
+      color 0.2s,
+      border-color 0.2s,
+      background-color 0.2s;
+  }
+  .topbar__surface:hover {
+    color: var(--a);
+    border-color: var(--a);
+    background: color-mix(in oklab, var(--a) 10%, var(--void));
+  }
+  .topbar__surface:disabled {
+    cursor: progress;
+  }
+  .topbar__surface-short {
+    display: none;
   }
   .topbar__menu-button {
     display: none;
@@ -729,23 +778,6 @@ html.is-locked {
     animation:
       neon-ignite 1.7s var(--delay) backwards,
       neon-buzz 7s calc(var(--delay) + 3s) infinite;
-  }
-  /* In the Underworks the sign is failing: every letter stutters on its own clock, one is nearly dead */
-  html.is-booted[data-theme="underworks"] .neon-letter {
-    animation:
-      neon-ignite 1.7s var(--delay) backwards,
-      neon-fail 6.3s calc(var(--delay) + 2s) infinite;
-  }
-  html.is-booted[data-theme="underworks"] .neon-letter:nth-child(3n + 2) {
-    animation-duration: 1.7s, 8.9s;
-  }
-  html.is-booted[data-theme="underworks"] .neon-letter:nth-child(4n) {
-    animation-duration: 1.7s, 11.3s;
-  }
-  html.is-booted[data-theme="underworks"] .neon-letter:nth-child(6) {
-    animation:
-      neon-ignite 1.7s var(--delay) backwards,
-      neon-dying 9s calc(var(--delay) + 1s) infinite;
   }
   .hero__role {
     color: var(--ink);
@@ -1229,105 +1261,6 @@ html.is-locked {
     gap: 10px;
     padding-top: 6px;
   }
-  /* Work-in-progress cards (Underworks) */
-  .work[data-mode="wip"] .shard__inner {
-    border-style: dashed;
-  }
-  .shard__tape {
-    position: absolute;
-    top: 30px;
-    left: -52px;
-    width: 230px;
-    padding: 7px 0;
-    color: var(--void);
-    font-size: 10.5px;
-    font-weight: 700;
-    font-stretch: 100%;
-    letter-spacing: 0.14em;
-    text-align: center;
-    text-transform: uppercase;
-    background:
-      repeating-linear-gradient(-45deg, #120c06 0 6px, transparent 6px 12px) top / 100% 4px
-        no-repeat,
-      repeating-linear-gradient(-45deg, #120c06 0 6px, transparent 6px 12px) bottom / 100% 4px
-        no-repeat,
-      var(--a);
-    box-shadow: 0 6px 18px rgb(0 0 0 / 0.55);
-    transform: rotate(-34deg);
-    pointer-events: none;
-  }
-  .shard__meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 14px;
-    color: var(--haze);
-    font-size: 12px;
-    font-stretch: 100%;
-  }
-  .shard__status {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 3px 9px 3px 8px;
-    color: var(--ink);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    border: 1px solid var(--line-strong);
-    background: color-mix(in oklab, var(--a) 10%, transparent);
-  }
-  .shard__status::before {
-    content: "";
-    width: 7px;
-    height: 7px;
-    background: var(--a);
-    box-shadow: 0 0 8px var(--a);
-  }
-  .shard__status[data-status="building"]::before {
-    animation: blink 1.2s steps(1, end) infinite;
-  }
-  .shard__status[data-status="blueprint"]::before {
-    background: var(--signal);
-    box-shadow: 0 0 8px var(--signal);
-  }
-  .shard__status[data-status="testing"]::before {
-    background: #3dff86;
-    box-shadow: 0 0 8px #3dff86;
-  }
-  .shard__build {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-    color: var(--haze);
-    font-size: 11.5px;
-    font-stretch: 100%;
-  }
-  .shard__bar {
-    position: relative;
-    height: 8px;
-    overflow: hidden;
-    border: 1px solid var(--line-strong);
-    background: repeating-linear-gradient(
-      -45deg,
-      color-mix(in oklab, var(--a) 16%, transparent) 0 5px,
-      transparent 5px 10px
-    );
-  }
-  .shard__bar span {
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: var(--progress);
-    background: var(--a);
-    box-shadow: 0 0 12px var(--a);
-  }
-  .shard__percent {
-    color: var(--ink);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
 
   .work__progress {
     height: 2px;
@@ -1608,6 +1541,519 @@ html.is-locked {
     color: var(--a);
   }
 
+  /* ──────────────────────────── The Underworks ──────────────────────── */
+
+  html[data-theme="underworks"] .backdrop__dim {
+    opacity: calc(var(--dim, 0) * 0.14);
+  }
+
+  /* Painted metal instead of glowing neon */
+  html[data-theme="underworks"] .btn {
+    border-radius: 0;
+    clip-path: polygon(
+      0 0,
+      calc(100% - 12px) 0,
+      100% 12px,
+      100% 100%,
+      12px 100%,
+      0 calc(100% - 12px)
+    );
+  }
+  html[data-theme="underworks"] .btn--primary {
+    color: #1b1007;
+    background: linear-gradient(to bottom, #f5a24a, #d47722);
+    border-color: #f5a24a;
+    box-shadow: none;
+  }
+  html[data-theme="underworks"] .btn--primary:hover {
+    color: #1b1007;
+    background: linear-gradient(to bottom, #ffc27a, #e88a2e);
+    box-shadow: none;
+  }
+  html[data-theme="underworks"] .btn:not(.btn--primary):hover {
+    box-shadow: inset 0 0 0 1px var(--a);
+  }
+
+  .uw {
+    position: relative;
+  }
+
+  /* Entrance */
+  .uw-entrance {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    min-height: 100svh;
+    /* The caution tape is wider than the screen; never let it scroll sideways */
+    overflow-x: clip;
+    padding: calc(var(--header-h) + 40px) 0 clamp(150px, 21vh, 230px);
+  }
+  .uw-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    color: var(--a);
+    font-size: 11.5px;
+    font-stretch: 100%;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    border: 1px dashed color-mix(in oklab, var(--a) 45%, transparent);
+    background: rgb(10 7 5 / 0.62);
+  }
+  .uw-kicker__light {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--b);
+    box-shadow: 0 0 10px var(--b);
+    animation: uw-beacon 1.8s steps(1, end) infinite;
+  }
+  .uw-title {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.3em;
+    margin: 0.28em 0 0.1em -0.04em;
+    font-size: clamp(3rem, 10.5vw, 8.6rem);
+    font-weight: 800;
+    font-stretch: 78%;
+    line-height: 0.9;
+    letter-spacing: 0.01em;
+  }
+  .uw-title__word {
+    display: inline-flex;
+  }
+  /* Each letter is a dirty bulb sign: most work, some stutter, one is dead, one hangs loose */
+  .uw-title__letter {
+    position: relative;
+    display: inline-block;
+    color: var(--tube);
+    text-shadow:
+      0 0 1px #fff4e2,
+      0 0 8px rgb(255 150 60 / 0.55),
+      0 0 28px rgb(255 105 30 / 0.3);
+  }
+  .uw-title__letter[data-state="dim"] {
+    color: #a86c3a;
+    text-shadow: 0 0 14px rgb(255 120 40 / 0.22);
+  }
+  .uw-title__letter[data-state="dead"] {
+    color: rgb(28 20 15 / 0.7);
+    -webkit-text-stroke: 1.5px rgb(170 140 112 / 0.35);
+    text-shadow: none;
+  }
+  .uw-title__letter[data-state="flicker"] {
+    animation: uw-letter-flicker 6.3s var(--d) infinite;
+  }
+  .uw-title__letter[data-state="hang"] {
+    transform: rotate(15deg) translateY(0.06em);
+    transform-origin: 18% 6%;
+    animation:
+      uw-letter-hang 3.4s ease-in-out infinite alternate,
+      uw-letter-flicker 4.7s var(--d) infinite;
+  }
+  /* Sparks dripping off the loose letter */
+  .uw-title__letter[data-state="hang"]::before,
+  .uw-title__letter[data-state="hang"]::after {
+    content: "";
+    position: absolute;
+    left: 14%;
+    top: 4%;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #fff1d6;
+    box-shadow:
+      0 0 6px 1px #ffb35c,
+      7px 5px 0 -1px #ffd28f;
+    opacity: 0;
+    animation: uw-drip 2.9s 0.6s ease-in infinite;
+  }
+  .uw-title__letter[data-state="hang"]::after {
+    left: 22%;
+    animation-delay: 1.9s;
+    animation-duration: 3.7s;
+  }
+  .uw-lead {
+    max-width: 52ch;
+    margin-top: 16px;
+    color: var(--haze);
+    font-size: 15px;
+  }
+  .uw-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 24px;
+    margin-top: 18px;
+    color: var(--ink);
+    font-size: 11.5px;
+    font-stretch: 100%;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .uw-meta span::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: 10px;
+    background: var(--a);
+    vertical-align: 1px;
+  }
+  .uw-descend {
+    margin-top: 28px;
+  }
+  .uw-descend svg {
+    animation: nudge 1.8s var(--ease-in-out) infinite;
+  }
+  /* Caution tape strung across the way down */
+  .uw-tape {
+    position: absolute;
+    left: -6vw;
+    right: -6vw;
+    bottom: -22px;
+    z-index: 2;
+    overflow: hidden;
+    padding: 6px 0;
+    background:
+      repeating-linear-gradient(-45deg, #17100a 0 9px, transparent 9px 18px) top / 100% 5px
+        no-repeat,
+      repeating-linear-gradient(-45deg, #17100a 0 9px, transparent 9px 18px) bottom / 100% 5px
+        no-repeat,
+      #d99a35;
+    box-shadow: 0 14px 30px rgb(0 0 0 / 0.55);
+    transform: rotate(-2deg);
+    pointer-events: none;
+  }
+  .uw-tape__track {
+    display: flex;
+    width: max-content;
+    animation: uw-tape 48s linear infinite;
+  }
+  .uw-tape__track span {
+    padding: 3px 26px;
+    color: #160d06;
+    font-size: 11px;
+    font-weight: 700;
+    font-stretch: 100%;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* One section per site */
+  .uw-site {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 100svh;
+    padding: calc(var(--header-h) + 28px) 0 clamp(120px, 15vh, 160px);
+  }
+  .uw-site__inner {
+    display: flex;
+    width: 100%;
+    max-width: var(--content);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+  .uw-site[data-side="right"] .uw-site__inner {
+    justify-content: flex-end;
+  }
+  .uw-order-wrap {
+    width: min(520px, 100%);
+    filter: drop-shadow(0 22px 34px rgb(0 0 0 / 0.6));
+  }
+  /* A work order on a steel plate: chipped corners, rivets, grime */
+  .uw-order {
+    position: relative;
+    padding: 42px 28px 26px;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 15px 34px, #75614c 0 2.4px, #2a1f16 3.2px, transparent 4px),
+      radial-gradient(
+        circle at calc(100% - 15px) 46px,
+        #75614c 0 2.4px,
+        #2a1f16 3.2px,
+        transparent 4px
+      ),
+      radial-gradient(
+        circle at 26px calc(100% - 14px),
+        #75614c 0 2.4px,
+        #2a1f16 3.2px,
+        transparent 4px
+      ),
+      radial-gradient(
+        circle at calc(100% - 14px) calc(100% - 14px),
+        #75614c 0 2.4px,
+        #2a1f16 3.2px,
+        transparent 4px
+      ),
+      var(--grain),
+      radial-gradient(ellipse 80% 60% at 70% 0%, rgb(240 144 47 / 0.07), transparent 70%),
+      linear-gradient(165deg, #1e1711 0%, #140e0a 55%, #0d0907 100%);
+    border: 1px solid rgb(240 144 47 / 0.16);
+    clip-path: polygon(
+      0 14px,
+      14px 0,
+      calc(100% - 30px) 0,
+      100% 30px,
+      100% 100%,
+      24px 100%,
+      0 calc(100% - 24px)
+    );
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.05),
+      inset 0 -60px 70px -50px rgb(0 0 0 / 0.7);
+    opacity: 0;
+  }
+  .uw-site[data-inview] .uw-order {
+    animation: uw-power-on 0.9s forwards;
+  }
+  .uw-order__tape {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    height: 20px;
+    background: repeating-linear-gradient(-45deg, #d99a35 0 10px, #17100a 10px 20px);
+    opacity: 0.85;
+  }
+  .uw-order__tape span {
+    padding: 0 12px;
+    color: #d99a35;
+    font-size: 10px;
+    font-weight: 700;
+    font-stretch: 100%;
+    line-height: 20px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    background: #17100a;
+  }
+  .uw-order__top {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: end;
+    gap: 20px;
+  }
+  .uw-order__id {
+    display: grid;
+    justify-items: start;
+    gap: 8px;
+  }
+  .uw-order__site {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    color: var(--haze);
+    font-size: 11.5px;
+    font-stretch: 100%;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .uw-order__site strong {
+    color: var(--a);
+    font-family: var(--font-head);
+    font-size: 50px;
+    font-weight: 800;
+    font-stretch: 75%;
+    line-height: 0.9;
+    letter-spacing: 0;
+  }
+  .uw-order__depth {
+    color: var(--signal);
+    font-size: 12px;
+    font-stretch: 100%;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.08em;
+  }
+  /* The blueprint, taped to the plate */
+  .uw-order__plan {
+    position: relative;
+    aspect-ratio: 5 / 3;
+    border: 1px solid rgb(159 214 255 / 0.22);
+    box-shadow: 0 10px 22px rgb(0 0 0 / 0.5);
+    transform: rotate(-1deg);
+  }
+  .uw-order__plan .shard__art {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .uw-order__plan::before,
+  .uw-order__plan::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    width: 44px;
+    height: 14px;
+    background: rgb(214 196 160 / 0.55);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
+  }
+  .uw-order__plan::before {
+    top: -6px;
+    left: -10px;
+    transform: rotate(-32deg);
+  }
+  .uw-order__plan::after {
+    right: -10px;
+    bottom: -5px;
+    transform: rotate(-28deg);
+  }
+  .uw-order__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px 4px 9px;
+    color: var(--a);
+    font-size: 10.5px;
+    font-weight: 600;
+    font-stretch: 100%;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border: 1px solid currentColor;
+  }
+  .uw-order__status::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
+  .uw-order__status[data-status="blueprint"] {
+    color: var(--signal);
+  }
+  .uw-order__status[data-status="testing"] {
+    color: #93d39a;
+  }
+  .uw-order__status[data-status="building"]::before {
+    animation: uw-beacon 1.4s steps(1, end) infinite;
+  }
+  .uw-order__title {
+    margin-top: 20px;
+    color: var(--ink);
+    font-size: clamp(1.9rem, 3vw, 2.6rem);
+    font-weight: 800;
+    font-stretch: 80%;
+    line-height: 1;
+  }
+  .uw-order__summary {
+    margin-top: 10px;
+    color: var(--haze);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .uw-order__progress {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    margin-top: 18px;
+    color: var(--haze);
+    font-size: 11px;
+    font-stretch: 100%;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .uw-meter {
+    display: grid;
+    grid-template-columns: repeat(20, minmax(0, 1fr));
+    gap: 3px;
+    height: 12px;
+  }
+  .uw-meter i {
+    background: rgb(240 144 47 / 0.08);
+    border: 1px solid rgb(240 144 47 / 0.14);
+  }
+  .uw-meter i[data-on] {
+    background: var(--a);
+    border-color: var(--a);
+  }
+  .uw-meter i[data-front] {
+    animation: uw-segment 2.4s steps(1, end) infinite;
+  }
+  .uw-order__percent {
+    color: var(--ink);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+  .uw-order__facts {
+    display: grid;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 12px;
+    font-size: 12.5px;
+    border-top: 1px dashed rgb(240 144 47 / 0.22);
+  }
+  .uw-order__facts div {
+    display: grid;
+    grid-template-columns: 11ch minmax(0, 1fr);
+    align-items: baseline;
+    gap: 12px;
+  }
+  .uw-order__facts dt {
+    color: var(--haze);
+    font-size: 10.5px;
+    font-stretch: 100%;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .uw-order__facts ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .uw-order__facts li {
+    padding: 3px 8px;
+    font-size: 11.5px;
+    font-stretch: 100%;
+    border: 1px solid rgb(236 228 216 / 0.14);
+    background: rgb(236 228 216 / 0.04);
+  }
+  .uw-order__link {
+    margin-top: 18px;
+  }
+
+  /* The bottom of the shaft */
+  .uw-end {
+    display: grid;
+    place-items: center;
+    min-height: 92svh;
+    padding: calc(var(--header-h) + 40px) var(--gutter) clamp(150px, 22vh, 240px);
+    text-align: center;
+  }
+  .uw-end__inner {
+    display: grid;
+    justify-items: center;
+  }
+  .uw-end__depth {
+    color: var(--signal);
+    font-size: 12px;
+    font-stretch: 100%;
+    letter-spacing: 0.22em;
+  }
+  .uw-end__title {
+    margin-top: 10px;
+    color: var(--tube);
+    font-size: clamp(2.6rem, 7vw, 5.6rem);
+    font-weight: 800;
+    font-stretch: 78%;
+    line-height: 0.95;
+    text-shadow:
+      0 0 2px #fff4e2,
+      0 0 26px rgb(255 110 30 / 0.45);
+  }
+  .uw-end__text {
+    margin-top: 12px;
+    color: var(--ink);
+    font-size: 15px;
+  }
+  .uw-end .btn {
+    margin-top: 30px;
+  }
+
   /* ───────────────────────────── HUD & dock ─────────────────────────── */
 
   .hud-readout {
@@ -1701,6 +2147,10 @@ html.is-locked {
   .depth__value {
     color: var(--ink);
     font-variant-numeric: tabular-nums;
+  }
+  .depth__unit {
+    margin-top: -8px;
+    color: var(--haze);
   }
 
   /* Background music: now-playing credit above the HUD readout */
@@ -2190,52 +2640,6 @@ html.is-locked {
   }
 }
 
-@keyframes neon-fail {
-  0%,
-  82%,
-  85.5%,
-  89%,
-  100% {
-    color: var(--tube);
-    text-shadow: var(--neon-glow);
-    -webkit-text-stroke-color: transparent;
-  }
-  83%,
-  87.5% {
-    color: color-mix(in oklab, var(--a) 7%, transparent);
-    text-shadow: none;
-    -webkit-text-stroke-color: color-mix(in oklab, var(--a) 38%, transparent);
-  }
-}
-
-@keyframes neon-dying {
-  0%,
-  11%,
-  13.5%,
-  15.5%,
-  51%,
-  54%,
-  100% {
-    color: color-mix(in oklab, var(--a) 7%, transparent);
-    text-shadow: none;
-    -webkit-text-stroke-color: color-mix(in oklab, var(--a) 38%, transparent);
-  }
-  12%,
-  14.5%,
-  52%,
-  53% {
-    color: var(--tube);
-    text-shadow: var(--neon-glow);
-    -webkit-text-stroke-color: transparent;
-  }
-}
-
-@keyframes blink {
-  50% {
-    opacity: 0.15;
-  }
-}
-
 @keyframes neon-buzz {
   0%,
   90%,
@@ -2246,6 +2650,89 @@ html.is-locked {
   }
   91%,
   95% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes uw-beacon {
+  50% {
+    opacity: 0.12;
+  }
+}
+
+/* A couple of quick dips every few seconds (never more than 3 per second) */
+@keyframes uw-letter-flicker {
+  0%,
+  86%,
+  88.5%,
+  92%,
+  100% {
+    opacity: 1;
+  }
+  87%,
+  90% {
+    opacity: 0.18;
+  }
+}
+
+@keyframes uw-letter-hang {
+  from {
+    transform: rotate(13deg) translateY(0.05em);
+  }
+  to {
+    transform: rotate(18deg) translateY(0.07em);
+  }
+}
+
+@keyframes uw-drip {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  4% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(6px, 90px);
+  }
+}
+
+@keyframes uw-tape {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* A card coming on like a work light: catches twice, then stays on */
+@keyframes uw-power-on {
+  0% {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  30% {
+    opacity: 0.85;
+  }
+  40% {
+    opacity: 0.25;
+  }
+  58% {
+    opacity: 1;
+  }
+  66% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes uw-segment {
+  50% {
     opacity: 0.25;
   }
 }
@@ -2380,8 +2867,12 @@ html.is-locked {
 
 @media (min-width: 1181px) {
   /* Room for the music player stacked above the HUD readout */
-  .hero {
+  .hero,
+  .uw-entrance {
     padding-bottom: clamp(196px, 24vh, 260px);
+  }
+  .uw-site {
+    padding-bottom: 190px;
   }
   .footer__inner {
     padding-bottom: 182px;
@@ -2405,6 +2896,13 @@ html.is-locked {
 }
 
 @media (max-width: 959px) {
+  .uw-site__inner,
+  .uw-site[data-side="right"] .uw-site__inner {
+    justify-content: center;
+  }
+  .uw-order-wrap {
+    width: min(540px, 100%);
+  }
   .about__grid,
   .journey__grid,
   .contact__grid {
@@ -2453,6 +2951,22 @@ html.is-locked {
 }
 
 @media (max-width: 860px) {
+  /* No menu in the Underworks, so the language switch stays in the bar */
+  html[data-theme="underworks"] .topbar .topbar__tools > .lang-switch {
+    display: inline-grid;
+  }
+  .topbar__surface-long {
+    display: none;
+  }
+  .topbar__surface-short {
+    display: inline;
+  }
+  .uw-entrance {
+    padding-bottom: max(190px, 24vh);
+  }
+  .uw-site {
+    padding-bottom: 170px;
+  }
   .topbar__nav {
     display: none;
   }
@@ -2501,6 +3015,29 @@ html.is-locked {
 }
 
 @media (max-width: 520px) {
+  .uw-order {
+    padding: 36px 18px 22px;
+  }
+  .uw-order__top {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .uw-order__id {
+    grid-template-columns: auto auto;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .uw-order__status {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .uw-order__site strong {
+    font-size: 38px;
+  }
+  .uw-order__facts div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
   .music {
     bottom: 98px;
   }
@@ -2566,6 +3103,9 @@ html.is-locked {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .uw-order {
+    opacity: 1;
+  }
   *,
   *::before,
   *::after {

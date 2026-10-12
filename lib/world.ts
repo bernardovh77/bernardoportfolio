@@ -25,6 +25,11 @@ export const world = {
   ready: false,
   /** Bass level of the background music (0..1), used to pulse the neon */
   audioLevel: 0,
+  /**
+   * Underworks only: scroll progress at which each part of the page is centered
+   * (entrance, one per construction site, the bottom). The camera stops at each one.
+   */
+  siteKnots: [] as number[],
 };
 
 /** 0 → 1 → 0 envelope of the current travel transition. */
