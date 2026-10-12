@@ -52,23 +52,36 @@ export const links = {
 };
 
 /**
- * Background music. The file lives in public/music/ (change `src` to use
- * another one). If the file is missing, the music player hides itself.
+ * Background music. Files live in public/music/ (change `src` to use
+ * another one). If a file is missing, the player hides itself (or, for the
+ * Underworks, keeps playing the main track).
  * Title and artist can be plain text, or { en, pt } to translate them.
  */
-export const music: {
+export type Track = {
   src: string;
   title: string | Localized;
   artist: string | Localized;
+  /** Optional: link to the track page, shown on the title (some licenses require it) */
   link: string;
+  /** Playback volume, from 0 to 1 */
   volume: number;
-} = {
+};
+
+/** Plays on the surface districts. */
+export const music: Track = {
   src: "/music/theme.mp3",
   title: "Night Transit",
   artist: { en: "Original soundtrack", pt: "Trilha sonora original" },
-  /** Optional: link to the track page, shown on the title (some licenses require it) */
   link: "",
-  /** Playback volume, from 0 to 1 */
+  volume: 0.35,
+};
+
+/** Plays only in the Underworks. The two cross-fade when you travel. */
+export const underworksMusic: Track = {
+  src: "/music/underworks.mp3",
+  title: "Slag Engine",
+  artist: { en: "Original soundtrack", pt: "Trilha sonora original" },
+  link: "",
   volume: 0.35,
 };
 

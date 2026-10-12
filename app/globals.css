@@ -2257,6 +2257,74 @@ html.is-locked {
     text-overflow: ellipsis;
   }
 
+  /* Each song has its own credit; only the one playing shows */
+  .music__credit {
+    display: grid;
+    min-width: 0;
+    animation: music-credit 0.6s var(--ease-out);
+  }
+  .music[data-track="surface"] .music__credit[data-for="underworks"],
+  .music[data-track="underworks"] .music__credit[data-for="surface"] {
+    display: none;
+  }
+
+  /* Underworks: a salvaged stepped meter instead of smooth neon bars */
+  html[data-theme="underworks"] .music__eq {
+    position: relative;
+    gap: 3px;
+    height: 24px;
+    padding: 3px 4px 5px 3px;
+    border-top: 1px solid rgb(240 144 47 / 0.35);
+    border-left: 1px solid rgb(240 144 47 / 0.35);
+    background:
+      radial-gradient(circle at 3px 3px, #7a6450 0 1.2px, transparent 1.6px),
+      repeating-linear-gradient(-45deg, #d99a35 0 3px, #17100a 3px 6px) bottom / 100% 3px no-repeat,
+      rgb(0 0 0 / 0.4);
+  }
+  html[data-theme="underworks"] .music__eq i {
+    position: relative;
+    width: 4px;
+    background: linear-gradient(to top, var(--a) 72%, transparent 72%) 0 100% / 100% 12.5% repeat-y;
+    box-shadow: none;
+    opacity: 0.9;
+    transform: none !important;
+    clip-path: inset(calc((1 - var(--level, 0.125)) * 100%) 0 0 0);
+    transition: clip-path 0.05s steps(1, end);
+  }
+  html[data-theme="underworks"] .music[data-status="playing"] .music__eq i {
+    opacity: 1;
+  }
+  /* The top band runs hot */
+  html[data-theme="underworks"] .music__eq i:nth-child(5) {
+    background-image: linear-gradient(to top, var(--b) 72%, transparent 72%);
+  }
+  /* A burnt-out segment that never lights */
+  html[data-theme="underworks"] .music__eq i:nth-child(2)::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 37.5%;
+    height: 12.5%;
+    background: #120c08;
+  }
+  /* A bar with a loose contact */
+  html[data-theme="underworks"] .music[data-status="playing"] .music__eq i:nth-child(4) {
+    animation: eq-fault 3.7s steps(1, end) infinite;
+  }
+  /* A bare wire where the last bar's cover is missing */
+  html[data-theme="underworks"] .music__eq::after {
+    content: "";
+    position: absolute;
+    right: -6px;
+    top: 4px;
+    width: 7px;
+    height: 12px;
+    border: 1px solid #8a5a32;
+    border-left: 0;
+    border-radius: 0 6px 6px 0;
+  }
+
   .dock {
     position: fixed;
     right: var(--gutter);
@@ -2734,6 +2802,26 @@ html.is-locked {
 @keyframes uw-segment {
   50% {
     opacity: 0.25;
+  }
+}
+
+@keyframes music-credit {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes eq-fault {
+  0%,
+  70%,
+  76%,
+  100% {
+    opacity: 1;
+  }
+  72%,
+  78% {
+    opacity: 0.15;
   }
 }
 

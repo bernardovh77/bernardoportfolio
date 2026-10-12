@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { music as track } from "@/lib/content";
+import { music as surfaceTrack, type Track, underworksMusic } from "@/lib/content";
 import { localize } from "@/lib/i18n";
 import { musicStore, readMusicPreference, saveMusicPreference } from "@/lib/music";
+import type { ThemeId } from "@/lib/themes";
 import { world } from "@/lib/world";
 import { useExperience } from "@/components/experience/ExperienceProvider";
 import { PauseIcon, PlayIcon } from "./Icons";
 
 const FADE_IN = 2.5; // seconds
 const FADE_OUT = 0.6; // seconds
+/** How long the two songs overlap when you travel to or from the Underworks */
+const CROSSFADE = 3; // seconds
 
 // Equalizer bands in Hz, from bass to treble, one per bar
 const BANDS = [
@@ -21,33 +24,36 @@ const BANDS = [
 ] as const;
 // How fast each bar re-adapts to its band's loudest and quietest moments (per second)
 const ADAPT = 0.15;
-
-// Down in the Underworks the music sounds like it comes through the walls
-const OPEN_HZ = 20000;
-const MUFFLED_HZ = 1500;
-let muffled = false;
+// The Underworks equalizer is a stepped meter with this many segments
+const SEGMENTS = 8;
 
 // Input that can give a page permission to play sound. Phones only grant it
 // when the finger lifts, so listening to pointerdown alone isn't enough.
 const GESTURES = ["pointerdown", "pointerup", "touchend", "click", "keydown"] as const;
 
+type Slot = "surface" | "underworks";
+const TRACKS: Record<Slot, Track> = { surface: surfaceTrack, underworks: underworksMusic };
+const SLOTS = Object.keys(TRACKS) as Slot[];
+const slotFor = (theme: ThemeId): Slot => (theme === "underworks" ? "underworks" : "surface");
+
 type Graph = {
   context: AudioContext;
-  gain: GainNode;
-  filter: BiquadFilterNode;
+  /** Fades the music in and out when it is played or paused */
+  master: GainNode;
   analyser: AnalyserNode;
   data: Uint8Array<ArrayBuffer>;
   /** First and last analyser bin of each equalizer band */
   bands: (readonly [number, number])[];
+  /** Each song has its own volume, used for the cross-fade */
+  inputs: Map<HTMLAudioElement, GainNode>;
 };
 
-// An <audio> element can only ever be connected to one Web Audio graph,
-// so keep it per element and reuse it if the component re-mounts.
-const graphs = new WeakMap<HTMLAudioElement, Graph>();
+// One audio graph for the whole page (an <audio> element can only ever be
+// connected once), reused if the player re-mounts.
+let shared: Graph | null = null;
 
-function getGraph(audio: HTMLAudioElement): Graph | null {
-  const existing = graphs.get(audio);
-  if (existing) return existing;
+function getGraph(): Graph | null {
+  if (shared) return shared;
   const AudioContextClass =
     window.AudioContext ??
     (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -55,89 +61,149 @@ function getGraph(audio: HTMLAudioElement): Graph | null {
   let context: AudioContext | null = null;
   try {
     context = new AudioContextClass();
-    const source = context.createMediaElementSource(audio);
-    const gain = context.createGain();
-    gain.gain.value = 0;
+    const master = context.createGain();
+    master.gain.value = 0;
     const analyser = context.createAnalyser();
     analyser.fftSize = 1024;
     analyser.minDecibels = -90;
     analyser.maxDecibels = -22;
     analyser.smoothingTimeConstant = 0.7;
-    const filter = context.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.Q.value = 0.6;
-    filter.frequency.value = muffled ? MUFFLED_HZ : OPEN_HZ;
-    // The analyser passes the sound through unchanged, so placing it first
-    // measures the track itself, whatever the volume or the filter.
-    source.connect(analyser);
-    analyser.connect(filter);
-    filter.connect(gain);
-    gain.connect(context.destination);
+    // The analyser sits before the master gain, so it measures the songs
+    // themselves (already mixed by the cross-fade), whatever the volume.
+    analyser.connect(master);
+    master.connect(context.destination);
     const binHz = context.sampleRate / analyser.fftSize;
     const last = analyser.frequencyBinCount - 1;
     const bands = BANDS.map(([low, high]) => {
       const start = Math.min(last, Math.max(1, Math.floor(low / binHz)));
       return [start, Math.min(last, Math.max(start, Math.ceil(high / binHz)))] as const;
     });
-    const graph = {
+    shared = {
       context,
-      gain,
-      filter,
+      master,
       analyser,
       data: new Uint8Array(analyser.frequencyBinCount),
       bands,
+      inputs: new Map(),
     };
-    graphs.set(audio, graph);
-    return graph;
+    return shared;
   } catch {
     context?.close().catch(() => {});
     return null;
   }
 }
 
+/** The gain node a song plays through, connecting it the first time. */
+function inputFor(graph: Graph, audio: HTMLAudioElement): GainNode | null {
+  const existing = graph.inputs.get(audio);
+  if (existing) return existing;
+  try {
+    const source = graph.context.createMediaElementSource(audio);
+    const gain = graph.context.createGain();
+    gain.gain.value = 0;
+    source.connect(gain);
+    gain.connect(graph.analyser);
+    graph.inputs.set(audio, gain);
+    return gain;
+  } catch {
+    return null;
+  }
+}
+
+function rampParam(context: AudioContext, param: AudioParam, value: number, seconds: number) {
+  const now = context.currentTime;
+  param.cancelScheduledValues(now);
+  param.setValueAtTime(param.value, now);
+  param.linearRampToValueAtTime(value, now + seconds);
+}
+
+// Without Web Audio, fade the elements' own volume instead
+const volumeFades = new WeakMap<HTMLAudioElement, number>();
+function fadeVolume(audio: HTMLAudioElement, value: number, seconds: number) {
+  cancelAnimationFrame(volumeFades.get(audio) ?? 0);
+  const from = audio.volume;
+  const start = performance.now();
+  const step = (now: number) => {
+    const k = Math.min(1, (now - start) / (seconds * 1000));
+    audio.volume = Math.min(1, Math.max(0, from + (value - from) * k));
+    if (k < 1) volumeFades.set(audio, requestAnimationFrame(step));
+  };
+  volumeFades.set(audio, requestAnimationFrame(step));
+}
+
+type Controller = { setSlot: (slot: Slot) => void };
+
 /**
  * Looping background music with a now-playing credit and a live equalizer.
- * Browsers block sound until the visitor interacts, so it starts on the first
- * click, tap or key press, fades in, and remembers if the visitor mutes it.
+ * The surface and the Underworks each have their own song, which cross-fade
+ * as soon as you start traveling. Browsers block sound until the visitor
+ * interacts, so it starts on the first click, tap or key press, fades in,
+ * and remembers if the visitor mutes it.
  */
 export function MusicPlayer() {
-  const { t, lang, theme } = useExperience();
+  const { t, lang, theme, traveling } = useExperience();
   const status = useSyncExternalStore(
     musicStore.subscribe,
     musicStore.getSnapshot,
     musicStore.getServerSnapshot,
   );
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const surfaceRef = useRef<HTMLAudioElement>(null);
+  const underworksRef = useRef<HTMLAudioElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const barsRef = useRef<HTMLSpanElement>(null);
+  const controllerRef = useRef<Controller | null>(null);
 
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !track.src) {
+    const elements: Record<Slot, HTMLAudioElement | null> = {
+      surface: surfaceRef.current,
+      underworks: underworksRef.current,
+    };
+    const main = elements.surface;
+    if (!main || !surfaceTrack.src) {
       musicStore.setStatus("unavailable");
       return;
     }
 
     const bars = Array.from(barsRef.current?.children ?? []) as HTMLElement[];
     const probe = new AbortController();
+    const available: Record<Slot, boolean> = {
+      surface: true,
+      underworks: Boolean(underworksMusic.src && elements.underworks),
+    };
     let graph: Graph | null = null;
+    let active: Slot = "surface";
     let meterFrame = 0;
     let pauseTimer = 0;
     let request = 0; // the latest play or pause call wins
+    let swap = 0; // the latest cross-fade wins
     let resumeOnShow = false;
     let level = 0;
     let lastFrame = 0;
     const peaks = BANDS.map(() => 0.6);
     const floors = BANDS.map(() => 0.3);
+    const switchTimers: number[] = [];
 
-    const rampTo = (value: number, seconds: number) => {
-      if (graph) {
-        const { context, gain } = graph;
-        const now = context.currentTime;
-        gain.gain.cancelScheduledValues(now);
-        gain.gain.setValueAtTime(gain.gain.value, now);
-        gain.gain.linearRampToValueAtTime(value, now + seconds);
+    const audioOf = (slot: Slot) => elements[slot] ?? main;
+    const showCredit = () => {
+      if (panelRef.current) panelRef.current.dataset.track = active;
+    };
+
+    // Sets a song's level: through its gain node, or its own volume as a fallback
+    const setLevel = (slot: Slot, value: number, seconds: number) => {
+      const audio = audioOf(slot);
+      const input = graph ? inputFor(graph, audio) : null;
+      if (graph && input) {
+        rampParam(graph.context, input.gain, value, seconds);
       } else {
-        audio.volume = Math.min(1, Math.max(0, value));
+        fadeVolume(audio, value, seconds);
+      }
+    };
+    const setMaster = (value: number, seconds: number) => {
+      if (graph) {
+        rampParam(graph.context, graph.master.gain, value, seconds);
+      } else {
+        // No Web Audio: the active song's volume is the master
+        fadeVolume(audioOf(active), value * TRACKS[active].volume, seconds);
       }
     };
 
@@ -145,10 +211,10 @@ export function MusicPlayer() {
       const dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 1 / 60;
       lastFrame = now;
       if (graph) {
-        const { analyser, data, bands, gain } = graph;
+        const { analyser, data, bands, master } = graph;
         analyser.getByteFrequencyData(data);
         // Follow the fades, so the bars rise and fall with what you hear
-        const audible = Math.min(1, gain.gain.value / Math.max(0.01, track.volume));
+        const audible = Math.min(1, master.gain.value);
         bands.forEach(([start, end], i) => {
           let sum = 0;
           for (let bin = start; bin <= end; bin++) sum += data[bin];
@@ -160,7 +226,11 @@ export function MusicPlayer() {
           const range = Math.max(0.12, peaks[i] - floors[i]);
           const height = Math.min(1, Math.max(0, (value - floors[i]) / range)) * audible;
           const bar = bars[i];
-          if (bar) bar.style.transform = `scaleY(${Math.max(0.12, height).toFixed(3)})`;
+          if (bar) {
+            bar.style.transform = `scaleY(${Math.max(0.12, height).toFixed(3)})`;
+            // The stepped meter (Underworks) lights whole segments
+            bar.style.setProperty("--level", String(Math.ceil(height * SEGMENTS) / SEGMENTS));
+          }
           if (i === 0) {
             // The neon pulse jumps on a kick and fades out more slowly
             const kick = height * height;
@@ -180,6 +250,7 @@ export function MusicPlayer() {
       world.audioLevel = 0;
       bars.forEach((bar) => {
         bar.style.transform = "";
+        bar.style.removeProperty("--level");
       });
     };
 
@@ -204,17 +275,26 @@ export function MusicPlayer() {
     const play = () => {
       const id = ++request;
       window.clearTimeout(pauseTimer);
-      graph = graph ?? getGraph(audio);
-      // With Web Audio the gain node sets the volume; otherwise the element does
+      graph = graph ?? getGraph();
+      const slot = active;
+      const audio = audioOf(slot);
       if (graph) {
-        audio.volume = 1;
+        // With Web Audio the gain nodes set the volume; otherwise the element does
+        SLOTS.forEach((s) => {
+          const input = inputFor(graph as Graph, audioOf(s));
+          if (input) audioOf(s).volume = 1;
+          if (input && s !== slot) input.gain.value = 0;
+        });
         graph.context.resume().catch(() => {});
+      } else {
+        audio.volume = 0;
       }
       audio.play().then(
         () => {
           if (id !== request) return;
           stopWaiting();
-          rampTo(track.volume, FADE_IN);
+          if (graph) setLevel(slot, TRACKS[slot].volume, 0.01);
+          setMaster(1, FADE_IN);
           musicStore.setStatus("playing");
           cancelAnimationFrame(meterFrame);
           meterFrame = requestAnimationFrame(meter);
@@ -230,12 +310,56 @@ export function MusicPlayer() {
 
     const pause = () => {
       request++;
-      rampTo(0, FADE_OUT);
+      swap++;
+      setMaster(0, FADE_OUT);
       window.clearTimeout(pauseTimer);
-      pauseTimer = window.setTimeout(() => audio.pause(), FADE_OUT * 1000);
+      pauseTimer = window.setTimeout(() => {
+        SLOTS.forEach((s) => audioOf(s).pause());
+      }, FADE_OUT * 1000);
       musicStore.setStatus("paused");
       stopMeter();
     };
+
+    // Travel between the surface and the Underworks: cross-fade the two songs.
+    // Each song keeps its place, so coming back picks up where it left off.
+    const setSlot = (wanted: Slot) => {
+      const next = available[wanted] ? wanted : "surface";
+      if (next === active) return;
+      const from = active;
+      active = next;
+      showCredit();
+      if (musicStore.getSnapshot() !== "playing") return;
+      const id = ++swap;
+      const incoming = audioOf(next);
+      const outgoing = audioOf(from);
+      if (incoming === outgoing) return;
+      if (graph) inputFor(graph, incoming);
+      if (graph) incoming.volume = 1;
+      else incoming.volume = 0;
+      incoming.play().then(
+        () => {
+          if (id !== swap) return;
+          setLevel(next, TRACKS[next].volume, CROSSFADE);
+          setLevel(from, 0, CROSSFADE);
+          switchTimers.push(
+            window.setTimeout(
+              () => {
+                if (active !== from) outgoing.pause();
+              },
+              CROSSFADE * 1000 + 100,
+            ),
+          );
+        },
+        () => {
+          // Could not start the new song: stay on the old one
+          if (id !== swap) return;
+          active = from;
+          showCredit();
+        },
+      );
+    };
+
+    controllerRef.current = { setSlot };
 
     musicStore.register({
       play: () => {
@@ -260,6 +384,15 @@ export function MusicPlayer() {
       stopMeter();
       musicStore.setStatus("unavailable");
     };
+    // If the Underworks song is missing, the main song keeps playing down there
+    const onUnderworksError = () => {
+      available.underworks = false;
+      if (active === "underworks") {
+        active = "surface";
+        showCredit();
+        if (musicStore.getSnapshot() === "playing") play();
+      }
+    };
 
     // Pause while the tab is in the background, fade back in on return
     const onVisibility = () => {
@@ -267,9 +400,10 @@ export function MusicPlayer() {
         resumeOnShow = musicStore.getSnapshot() === "playing";
         if (!resumeOnShow) return;
         request++;
+        swap++;
         window.clearTimeout(pauseTimer);
-        rampTo(0, 0.05);
-        audio.pause();
+        setMaster(0, 0.05);
+        SLOTS.forEach((s) => audioOf(s).pause());
         graph?.context.suspend().catch(() => {});
         stopMeter();
       } else if (resumeOnShow) {
@@ -278,62 +412,63 @@ export function MusicPlayer() {
       }
     };
 
-    audio.addEventListener("error", onError);
+    main.addEventListener("error", onError);
+    elements.underworks?.addEventListener("error", onUnderworksError);
     document.addEventListener("visibilitychange", onVisibility);
 
-    // Check that the track exists before showing the player. The song itself
-    // only downloads once it starts playing.
-    fetch(track.src, { method: "HEAD", signal: probe.signal })
+    // Check that the songs exist before showing the player. The songs
+    // themselves only download once they start playing.
+    fetch(surfaceTrack.src, { method: "HEAD", signal: probe.signal })
       .then((response) => (response.ok ? onReady() : onError()))
       .catch(() => {
         if (!probe.signal.aborted) onError();
       });
+    if (available.underworks) {
+      fetch(underworksMusic.src, { method: "HEAD", signal: probe.signal })
+        .then((response) => {
+          if (!response.ok) onUnderworksError();
+        })
+        .catch(() => {
+          if (!probe.signal.aborted) onUnderworksError();
+        });
+    }
 
     return () => {
       probe.abort();
       request++;
+      swap++;
+      controllerRef.current = null;
       stopWaiting();
-      audio.removeEventListener("error", onError);
+      main.removeEventListener("error", onError);
+      elements.underworks?.removeEventListener("error", onUnderworksError);
       document.removeEventListener("visibilitychange", onVisibility);
       window.clearTimeout(pauseTimer);
+      switchTimers.forEach((id) => window.clearTimeout(id));
       stopMeter();
-      audio.pause();
+      SLOTS.forEach((s) => audioOf(s).pause());
       musicStore.register(null);
       musicStore.setStatus("loading");
     };
   }, []);
 
-  // Muffle the music underground, open it up again on the surface
+  // The song follows the district, and changes as soon as a travel starts
+  const wanted = slotFor(traveling ?? theme);
   useEffect(() => {
-    muffled = theme === "underworks";
-    const audio = audioRef.current;
-    const graph = audio ? graphs.get(audio) : undefined;
-    if (!graph) return;
-    graph.filter.frequency.setTargetAtTime(
-      muffled ? MUFFLED_HZ : OPEN_HZ,
-      graph.context.currentTime,
-      0.35,
-    );
-  }, [theme]);
+    controllerRef.current?.setSlot(wanted);
+  }, [wanted]);
 
   const playing = status === "playing";
   const label = playing ? t.music.nowPlaying : status === "ready" ? t.music.ready : t.music.paused;
-  const name = localize(track.title, lang);
-  const artist = localize(track.artist, lang);
-  const title = track.link ? (
-    <a href={track.link} target="_blank" rel="noreferrer">
-      {name}
-    </a>
-  ) : (
-    name
-  );
 
   return (
     <>
-      <audio ref={audioRef} src={track.src || undefined} loop preload="none" />
+      <audio ref={surfaceRef} src={surfaceTrack.src || undefined} loop preload="none" />
+      <audio ref={underworksRef} src={underworksMusic.src || undefined} loop preload="none" />
       <aside
+        ref={panelRef}
         className="music"
         data-status={status}
+        data-track="surface"
         hidden={status === "loading" || status === "unavailable"}
         aria-label={t.music.nowPlaying}
       >
@@ -353,8 +488,25 @@ export function MusicPlayer() {
         </span>
         <span className="music__meta">
           <span className="music__label">{label}</span>
-          <span className="music__title">{title}</span>
-          {artist && <span className="music__artist">{artist}</span>}
+          {SLOTS.map((slot) => {
+            const track = TRACKS[slot];
+            const name = localize(track.title, lang);
+            const artist = localize(track.artist, lang);
+            return (
+              <span key={slot} className="music__credit" data-for={slot}>
+                <span className="music__title">
+                  {track.link ? (
+                    <a href={track.link} target="_blank" rel="noreferrer">
+                      {name}
+                    </a>
+                  ) : (
+                    name
+                  )}
+                </span>
+                {artist && <span className="music__artist">{artist}</span>}
+              </span>
+            );
+          })}
         </span>
       </aside>
     </>
