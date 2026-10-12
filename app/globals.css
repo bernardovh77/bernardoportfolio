@@ -2668,6 +2668,439 @@ html.is-locked {
   .cursor__ring.is-text {
     opacity: 0;
   }
+
+  /* ───────────────────── Drive mode (the secret ride) ───────────────── */
+
+  /* In the car the page steps aside: only the 3D view and the car's own UI stay */
+  html.is-driving :is(.page, .topbar, .dock, .hud-readout, .music, .depth, .backdrop__scrim, .backdrop__dim) {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* A small highway sign by the road. Easy to miss on purpose. */
+  .hitch {
+    position: absolute;
+    z-index: 2;
+    left: calc(50% + clamp(150px, 21vw, 330px));
+    top: calc(53.5svh - 50px);
+    display: grid;
+    justify-items: center;
+    padding: 4px;
+    color: #e6fff4;
+    opacity: 0;
+    transition: transform 0.3s var(--ease-out);
+  }
+  html.is-booted .hitch {
+    animation:
+      hitch-in 1.4s 2.6s var(--ease-out) both,
+      hitch-glint 9s 6s infinite;
+  }
+  .hitch:hover,
+  .hitch:focus-visible {
+    opacity: 1 !important;
+    transform: scale(1.14);
+  }
+  .hitch:disabled {
+    pointer-events: none;
+  }
+  .hitch__plate {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    padding: 4px 7px 3px;
+    background: linear-gradient(#11513c, #0a3428);
+    border: 1px solid rgb(220 255 240 / 0.7);
+    border-radius: 3px;
+    box-shadow:
+      0 0 0 1px #082a20,
+      0 0 12px rgb(0 0 0 / 0.5);
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+  }
+  .hitch__exit {
+    font-size: 8.5px;
+    font-weight: 700;
+    font-stretch: 100%;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .hitch__icon {
+    width: 30px;
+    height: 9px;
+    fill: currentColor;
+    stroke: currentColor;
+    stroke-width: 1.3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .hitch__posts {
+    width: 24px;
+    height: 16px;
+    border-inline: 2px solid #3b2a4c;
+  }
+  .hitch__tip {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 50%;
+    padding: 4px 9px;
+    color: var(--ink);
+    font-size: 11px;
+    font-stretch: 100%;
+    white-space: nowrap;
+    background: var(--panel-strong);
+    border: 1px solid var(--line-strong);
+    border-radius: 0 8px 0 8px;
+    opacity: 0;
+    translate: -50% 4px;
+    pointer-events: none;
+    transition:
+      opacity 0.2s,
+      translate 0.2s var(--ease-out);
+  }
+  .hitch:hover .hitch__plate,
+  .hitch:focus-visible .hitch__plate {
+    border-color: #fff;
+    box-shadow:
+      0 0 0 1px #082a20,
+      0 0 16px var(--a),
+      0 0 42px color-mix(in oklab, var(--a) 55%, transparent);
+  }
+  .hitch:hover .hitch__tip,
+  .hitch:focus-visible .hitch__tip {
+    opacity: 1;
+    translate: -50% 0;
+  }
+
+  /* Everything on top of the 3D view while riding */
+  .drive {
+    position: fixed;
+    inset: 0;
+    z-index: 92;
+    pointer-events: none;
+  }
+  .drive__hit {
+    position: absolute;
+    inset: 0;
+    pointer-events: auto;
+    touch-action: none;
+  }
+  .drive__bar {
+    position: absolute;
+    top: 16px;
+    left: var(--gutter);
+    right: var(--gutter);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    animation: drive-ui-in 0.6s 0.15s both;
+  }
+  .drive__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 12px;
+    color: var(--ink);
+    font-size: 11px;
+    font-stretch: 100%;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 0 10px 0 10px;
+    backdrop-filter: blur(6px);
+  }
+  .drive__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #19f3ff;
+    box-shadow: 0 0 10px #19f3ff;
+    animation: drive-blink 1.6s steps(2, jump-none) infinite;
+  }
+  .drive__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    pointer-events: auto;
+  }
+  .drive__button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    color: var(--ink);
+    font-size: 12px;
+    font-stretch: 100%;
+    white-space: nowrap;
+    background: var(--panel-strong);
+    border: 1px solid var(--line-strong);
+    border-radius: 0 10px 0 10px;
+    backdrop-filter: blur(6px);
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+  }
+  .drive__button:hover {
+    border-color: var(--a);
+    box-shadow: 0 0 18px color-mix(in oklab, var(--a) 40%, transparent);
+  }
+  .drive__button--leave {
+    border-color: color-mix(in oklab, var(--b) 65%, transparent);
+  }
+  .drive__button--leave:hover {
+    border-color: var(--b);
+    box-shadow: 0 0 18px color-mix(in oklab, var(--b) 40%, transparent);
+  }
+  .drive kbd {
+    padding: 1px 6px;
+    color: var(--haze);
+    font-size: 10px;
+    line-height: 1.5;
+    background: rgb(0 0 0 / 0.35);
+    border: 1px solid var(--wire);
+    border-radius: 4px;
+  }
+  .drive__hints {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 16px;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    margin: 0;
+    padding: 8px 16px;
+    color: var(--haze);
+    font-size: 11px;
+    font-stretch: 100%;
+    list-style: none;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 0 10px 0 10px;
+    backdrop-filter: blur(6px);
+    translate: -50% 0;
+    animation: drive-ui-in 0.6s 0.3s both;
+  }
+  .drive__hints li {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+  }
+  @media (pointer: coarse) {
+    .drive kbd {
+      display: none;
+    }
+  }
+  .drive__credit {
+    position: absolute;
+    top: 64px;
+    left: var(--gutter);
+    max-width: min(46ch, calc(100vw - 2 * var(--gutter)));
+    color: var(--haze);
+    font-size: 10px;
+    font-stretch: 100%;
+    line-height: 1.5;
+    pointer-events: auto;
+  }
+  .drive__credit a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* Touch pad (phones and tablets) */
+  .drive__pad {
+    position: absolute;
+    inset: auto 0 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  .drive__dpad {
+    position: relative;
+    width: 156px;
+    height: 156px;
+    pointer-events: auto;
+  }
+  .drive__ab {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    align-items: end;
+    gap: 10px;
+    pointer-events: auto;
+  }
+  .drive__key {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 600;
+    font-stretch: 100%;
+    background: rgb(20 9 34 / 0.72);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .drive__key:active {
+    background: color-mix(in oklab, var(--a) 45%, transparent);
+  }
+  .drive__key--up {
+    top: 0;
+    left: 52px;
+  }
+  .drive__key--left {
+    top: 52px;
+    left: 0;
+  }
+  .drive__key--right {
+    top: 52px;
+    left: 104px;
+  }
+  .drive__key--down {
+    top: 104px;
+    left: 52px;
+  }
+  .drive__dpad .drive__key::before {
+    content: "";
+    border: 7px solid transparent;
+    border-bottom-color: var(--ink);
+    translate: 0 -3px;
+  }
+  .drive__key--down::before {
+    rotate: 180deg;
+  }
+  .drive__key--left::before {
+    rotate: -90deg;
+  }
+  .drive__key--right::before {
+    rotate: 90deg;
+  }
+  .drive__key--round {
+    position: static;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+  }
+  .drive__key--main {
+    width: 72px;
+    height: 72px;
+    background: color-mix(in oklab, var(--a) 24%, rgb(20 9 34 / 0.72));
+    border-color: var(--a);
+  }
+  .drive__pad[data-doom] .drive__ab {
+    grid-template-columns: repeat(2, auto);
+  }
+
+  /* The jump into (and out of) the car */
+  .drive-fx {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    pointer-events: auto;
+    animation: drive-fx var(--transport) linear both;
+  }
+  .drive-fx::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(to bottom, rgb(255 255 255 / 0.05) 0 1px, transparent 1px 3px),
+      radial-gradient(ellipse 70% 55% at 50% 50%, color-mix(in oklab, var(--a) 30%, var(--void)), var(--void) 72%);
+  }
+  .drive-fx::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    background: #fff;
+    box-shadow:
+      0 0 18px #fff,
+      0 0 60px var(--a);
+    animation: drive-fx-line var(--transport) var(--ease-in-out) both;
+  }
+  .drive-fx__bands {
+    position: absolute;
+    inset: 0;
+  }
+  .drive-fx__bands span {
+    position: absolute;
+    left: -10vw;
+    right: -10vw;
+    top: calc(var(--i) * 14% + 2%);
+    height: 5%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--a) 45%, transparent),
+      color-mix(in oklab, var(--b) 40%, transparent),
+      transparent
+    );
+    mix-blend-mode: screen;
+    --shift: calc((var(--i) - 3) * 5vw);
+    animation: travel-band calc(var(--transport) * 0.35) steps(3) calc(var(--i) * -0.07s) infinite alternate;
+  }
+  .drive-fx__center {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    text-align: center;
+  }
+  .drive-fx__label {
+    color: var(--haze);
+    font-size: 12px;
+    font-stretch: 100%;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+  .drive-fx__name {
+    color: var(--ink);
+    font-family: var(--font-head);
+    font-size: clamp(3rem, 10vw, 7rem);
+    font-weight: 800;
+    font-stretch: 80%;
+    line-height: 0.92;
+    text-shadow:
+      -3px 0 var(--a),
+      3px 0 var(--b),
+      0 0 40px color-mix(in oklab, var(--a) 60%, transparent);
+  }
+  .drive-fx__bar {
+    width: min(240px, 60vw);
+    height: 2px;
+    margin-top: 8px;
+    background: var(--wire);
+  }
+  .drive-fx__bar span {
+    display: block;
+    height: 100%;
+    background: var(--a);
+    box-shadow: 0 0 12px var(--a);
+    transform-origin: left;
+    animation: travel-progress var(--transport) var(--ease-in-out) both;
+  }
 }
 
 /* ──────────────────────────────── Motion ───────────────────────────── */
@@ -2927,6 +3360,77 @@ html.is-locked {
   }
 }
 
+@keyframes hitch-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 0.6;
+    translate: 0 0;
+  }
+}
+
+/* Every few seconds the sign catches the light, for those who look closely */
+@keyframes hitch-glint {
+  0%,
+  92%,
+  100% {
+    filter: none;
+  }
+  95% {
+    filter: brightness(1.8) drop-shadow(0 0 6px #fff);
+  }
+}
+
+@keyframes drive-ui-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes drive-blink {
+  to {
+    opacity: 0.25;
+  }
+}
+
+@keyframes drive-fx {
+  0% {
+    opacity: 0;
+  }
+  30%,
+  56% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes drive-fx-line {
+  0% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  40% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  52% {
+    transform: scaleY(30);
+    opacity: 0.9;
+  }
+  70%,
+  100% {
+    transform: scaleY(1) scaleX(0);
+    opacity: 0;
+  }
+}
+
 @keyframes travel-progress {
   from {
     transform: scaleX(0);
@@ -2964,6 +3468,15 @@ html.is-locked {
   }
   .footer__inner {
     padding-bottom: 182px;
+  }
+}
+
+/* Below this width the name reaches the road sign's spot, so the sign moves up to the top corner */
+@media (max-width: 1279px) {
+  .hitch {
+    left: auto;
+    right: var(--gutter);
+    top: calc(var(--header-h) + 34px);
   }
 }
 
@@ -3039,6 +3552,12 @@ html.is-locked {
 }
 
 @media (max-width: 860px) {
+  .drive__badge {
+    display: none;
+  }
+  .drive__bar {
+    justify-content: flex-end;
+  }
   /* No menu in the Underworks, so the language switch stays in the bar */
   html[data-theme="underworks"] .topbar .topbar__tools > .lang-switch {
     display: inline-grid;

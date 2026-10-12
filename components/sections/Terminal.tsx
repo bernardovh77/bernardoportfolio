@@ -2,6 +2,7 @@
 
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { links, music, profile } from "@/lib/content";
+import { enterCar } from "@/lib/drive";
 import { musicStore } from "@/lib/music";
 import { isLang, localize, ui } from "@/lib/i18n";
 import { scrollToTarget } from "@/lib/scroll";
@@ -15,7 +16,7 @@ const PROMPT = "guest@bernardo:~$";
 
 /** A small working shell. Visitors can type commands to explore the site. */
 export function Terminal() {
-  const { t, lang, travelTo, setLang } = useExperience();
+  const { t, lang, theme, travelTo, setLang } = useExperience();
   const [lines, setLines] = useState<Line[]>([]);
   const [value, setValue] = useState("");
   const history = useRef<string[]>([]);
@@ -128,6 +129,18 @@ export function Terminal() {
       case "sudo":
       case "hire":
         print([echo, out(t.terminal.hire)]);
+        break;
+      // Not in `help`: a secret way into the cars on the desert highway
+      case "drive":
+      case "ride":
+      case "hitchhike":
+      case "carona":
+        if (theme === "desert") {
+          print([echo, out(t.drive.terminalGo)]);
+          enterCar();
+        } else {
+          print([echo, err(t.drive.terminalNoRoad)]);
+        }
         break;
       default:
         print([echo, err(t.terminal.notFound(command))]);

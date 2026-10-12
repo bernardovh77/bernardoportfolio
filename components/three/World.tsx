@@ -17,7 +17,9 @@ import {
   type ChromaticAberrationEffect,
   ToneMappingMode,
 } from "postprocessing";
-import { type PerspectiveCamera, Vector2, Vector3 } from "three";
+import { Euler, type PerspectiveCamera, Quaternion, Vector2, Vector3 } from "three";
+import { CAR_POSITION, cabinCamera, carMotion } from "@/lib/car/cabin";
+import { drive, viewAmount } from "@/lib/drive";
 import { onScrollProgress } from "@/lib/scroll";
 import { THEMES, type ThemeId } from "@/lib/themes";
 import {
@@ -41,6 +43,9 @@ const CAMERA_PATHS = {
 } satisfies Record<ThemeId, unknown>;
 
 const BASE_FOV = 55;
+const NEAR = 0.5;
+/** Inside the car the dashboard is a few centimeters away. */
+const CABIN_NEAR = 0.05;
 
 /** Moves the camera along the active district's path, with pointer parallax and the travel warp. */
 function CameraRig({ theme }: { theme: ThemeId }) {
@@ -51,11 +56,54 @@ function CameraRig({ theme }: { theme: ThemeId }) {
     theme: null as ThemeId | null,
     parallaxX: 0,
     parallaxY: 0,
+    // Riding in the car
+    headX: 0,
+    headY: 0,
+    motion: { y: 0, pitch: 0, roll: 0 },
+    carEuler: new Euler(),
+    carQuat: new Quaternion(),
+    localPos: new Vector3(),
+    localQuat: new Quaternion(),
   });
 
   useFrame((state, delta) => {
     const camera = state.camera as PerspectiveCamera;
     const r = rig.current;
+
+    if (drive.inside && theme === "desert") {
+      // First person, in the driver's seat: the car's body moves, the head follows the pointer
+      const k = 1 - Math.exp(-Math.min(delta, 0.1) * 3);
+      const free = world.reducedMotion ? 0 : 1;
+      r.headX += (world.pointerX * free - r.headX) * k;
+      r.headY += (world.pointerY * free - r.headY) * k;
+      const now = performance.now();
+      const m = carMotion(state.clock.elapsedTime, world.reducedMotion, r.motion);
+      const fov = cabinCamera(
+        viewAmount(now),
+        camera.aspect,
+        r.headX,
+        r.headY,
+        state.clock.elapsedTime,
+        world.reducedMotion,
+        r.localPos,
+        r.localQuat,
+      );
+      r.carQuat.setFromEuler(r.carEuler.set(m.pitch, 0, m.roll));
+      camera.position.copy(r.localPos).applyQuaternion(r.carQuat).add(CAR_POSITION);
+      camera.position.y += m.y;
+      camera.quaternion.copy(r.carQuat).multiply(r.localQuat);
+      camera.fov = fov + travelEnvelope(now) * 24;
+      camera.near = CABIN_NEAR;
+      camera.updateProjectionMatrix();
+      // Coming back out, jump straight onto the district's path
+      r.theme = null;
+      return;
+    }
+    if (camera.near !== NEAR) {
+      camera.near = NEAR;
+      camera.updateProjectionMatrix();
+    }
+
     const time = world.reducedMotion ? 0 : state.clock.elapsedTime;
     CAMERA_PATHS[theme](world.scroll, time, r.pos, r.look);
 
@@ -196,7 +244,7 @@ export default function World({ theme }: { theme: ThemeId }) {
       frameloop={reducedMotion ? "demand" : "always"}
       flat
       gl={{ antialias: false, alpha: false, stencil: false, powerPreference: "high-performance" }}
-      camera={{ fov: BASE_FOV, near: 0.5, far: 1400, position: [0, 4, 20] }}
+      camera={{ fov: BASE_FOV, near: NEAR, far: 1400, position: [0, 4, 20] }}
       style={{ position: "absolute", inset: 0 }}
       aria-hidden
     >

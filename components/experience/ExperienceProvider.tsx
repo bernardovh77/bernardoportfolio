@@ -12,6 +12,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { drive } from "@/lib/drive";
 import { type Lang, ui, type UiStrings } from "@/lib/i18n";
 import { applyPreferencesToDocument, preferencesStore } from "@/lib/preferences";
 import { scrollToTarget } from "@/lib/scroll";
@@ -90,7 +91,8 @@ export function ExperienceProvider({ children }: { children: ReactNode }) {
 
   const travelTo = useCallback((next: ThemeId) => {
     const current = preferencesStore.getSnapshot().theme;
-    if (travelingRef.current || next === current) return;
+    // No district hopping while riding in the car
+    if (travelingRef.current || next === current || drive.phase !== "off") return;
 
     const swap = () => {
       if (changesPage(current, next)) scrollToTarget(0, true);
@@ -126,6 +128,8 @@ export function ExperienceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey || isTypingTarget(event.target)) return;
+      // In the car the number keys belong to the games (DOOM's weapons)
+      if (drive.phase !== "off") return;
       const index = Number(event.key) - 1;
       if (Number.isInteger(index) && index >= 0 && index < THEME_IDS.length) {
         travelTo(THEME_IDS[index]);

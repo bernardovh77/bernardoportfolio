@@ -37,10 +37,18 @@ Interface text (menu labels, buttons, the terminal) is in `lib/i18n.ts`.
 | `components/three/` | The 3D world and the four district scenes (the Underworks is split into `scenes/underworks/`) |
 | `lib/themes.ts` | District colors used by the 3D scenes |
 | `lib/underworks.ts` | Layout shared by the Underworks page and its 3D shaft |
+| `lib/drive.ts`, `lib/car/` | The secret car ride: its states, the cabin layout, the console OS, its games and DOOM |
+| `components/drive/` | The hidden road sign and everything shown on top of the 3D view while riding |
 
 ## Keyboard shortcuts
 
 Press `1` to `4` to travel between districts. The terminal in the Contact section accepts commands too; type `help`.
+
+## The secret ride
+
+In the Synth Desert, a small **EXIT 77** sign by the road (or `drive` in the terminal) puts you inside one of the cars on the highway. After a moment looking at the road, the driver turns to the console screen, which runs NV-77 OS: Night Racer, Neon Snake, Synth Breaker, a radio button for the music, and the original DOOM.
+
+DOOM is id Software's Linux DOOM 1.10 source (GPL-2.0), compiled to WebAssembly by Cornelius Diekmann, with the free shareware Episode 1 built in. It only downloads when someone picks it. Credits and source links are in `public/games/doom/README.txt`.
 
 ## Deploy
 

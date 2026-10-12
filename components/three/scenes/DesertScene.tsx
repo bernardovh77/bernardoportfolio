@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useLayoutEffect, useMemo, useRef } from "react";
+import { type RefObject, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { useFrame } from "@react-three/fiber";
 import {
   AdditiveBlending,
@@ -18,11 +18,14 @@ import {
   type Vector3,
 } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { CAR_POSITION } from "@/lib/car/cabin";
+import { drive, driveStore } from "@/lib/drive";
 import { THEMES } from "@/lib/themes";
 import { createRandom } from "@/lib/random";
 import { world } from "@/lib/world";
 import { fogGLSL, outputGLSL, simplexGLSL } from "../glsl";
 import { SkyDome, Starfield, type SceneProps, useActiveRef } from "../shared";
+import { CarInterior } from "./desert/CarInterior";
 
 const THEME = THEMES.desert;
 const P = THEME.palette;
@@ -38,8 +41,12 @@ export function desertCamera(scroll: number, time: number, pos: Vector3, look: V
   look.set(sway * -4, 8 + scroll * 6, -140);
 }
 
+/** World units per second to km/h on the dashboard (the car is about 4 units long). */
+const KMH = 3.3;
+
 /**
- * Distance travelled along the highway. Scrolling the page makes you drive faster.
+ * Distance travelled along the highway. Scrolling the page makes you drive faster,
+ * and riding in the car cruises at highway speed.
  * Shared by the terrain, gates, traffic and dust so they all move together.
  */
 function useTravel(active: boolean) {
@@ -50,9 +57,11 @@ function useTravel(active: boolean) {
     if (!activeRef.current) return;
     const dt = Math.min(delta, 0.1);
     const boost = Math.min(Math.abs(world.velocity) * 2.2, 90);
-    const base = world.reducedMotion ? 3 : 18;
-    speed.current += (base + boost - speed.current) * (1 - Math.exp(-dt * 2.5));
+    const cruise = drive.inside ? 34 : 18;
+    const base = world.reducedMotion ? (drive.inside ? 8 : 3) : cruise;
+    speed.current += (base + boost - speed.current) * (1 - Math.exp(-dt * (drive.inside ? 0.8 : 2.5)));
     travel.current += speed.current * dt;
+    drive.speed = speed.current * KMH;
   });
   return travel;
 }
@@ -576,6 +585,8 @@ function Dust({ active, travel }: { active: boolean; travel: RefObject<number> }
       uTime: { value: 0 },
       uTravel: { value: 0 },
       uColor: { value: new Color("#ffb3c8") },
+      // x, z of the car and 1 while someone rides in it
+      uCar: { value: [CAR_POSITION.x, CAR_POSITION.z, 0] },
     }),
     [],
   );
@@ -587,6 +598,7 @@ function Dust({ active, travel }: { active: boolean; travel: RefObject<number> }
     if (!activeRef.current || !m) return;
     m.uniforms.uTime.value = state.clock.elapsedTime;
     m.uniforms.uTravel.value = travel.current;
+    m.uniforms.uCar.value[2] = drive.inside ? 1 : 0;
   });
 
   return (
@@ -601,6 +613,7 @@ function Dust({ active, travel }: { active: boolean; travel: RefObject<number> }
           /* glsl */ `
           uniform float uTime;
           uniform float uTravel;
+          uniform vec3 uCar;
           attribute vec3 aSeed;
           varying float vAlpha;
           void main() {
@@ -614,6 +627,9 @@ function Dust({ active, travel }: { active: boolean; travel: RefObject<number> }
             vec4 mv = viewMatrix * vec4(worldPos, 1.0);
             float dist = -mv.z;
             vAlpha = (1.0 - smoothstep(30.0, 140.0, dist)) * smoothstep(0.0, 6.0, local.z) * (0.3 + aSeed.x * 0.7);
+            // No dust floating around inside the car
+            vec2 inCar = abs(worldPos.xz - uCar.xy) - vec2(1.1, 2.6);
+            if (uCar.z > 0.5 && max(inCar.x, inCar.y) < 0.0 && worldPos.y < 1.6) vAlpha = 0.0;
             gl_PointSize = clamp(40.0 / dist, 1.0, 4.0);
             gl_Position = projectionMatrix * mv;
           }
@@ -642,6 +658,12 @@ function Dust({ active, travel }: { active: boolean; travel: RefObject<number> }
 
 export default function DesertScene({ active, tier }: SceneProps) {
   const travel = useTravel(active);
+  // The car is only built once someone hitches a ride
+  const { visited } = useSyncExternalStore(
+    driveStore.subscribe,
+    driveStore.getSnapshot,
+    driveStore.getServerSnapshot,
+  );
   return (
     <group visible={active}>
       <SkyDome
@@ -664,6 +686,7 @@ export default function DesertScene({ active, tier }: SceneProps) {
       <Gates active={active} travel={travel} />
       <HighwayTraffic active={active} tier={tier} travel={travel} />
       <Dust active={active} travel={travel} />
+      {visited && <CarInterior />}
     </group>
   );
 }

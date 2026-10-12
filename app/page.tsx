@@ -1,3 +1,4 @@
+import { DriveOverlay } from "@/components/drive/DriveOverlay";
 import { ExperienceProvider } from "@/components/experience/ExperienceProvider";
 import { SmoothScroll } from "@/components/experience/SmoothScroll";
 import { DistrictContent } from "@/components/sections/DistrictContent";
@@ -38,6 +39,7 @@ export default function Home() {
       <DepthMeter />
       <TravelDock />
       <TravelOverlay />
+      <DriveOverlay />
       <div className="scanlines" aria-hidden="true" />
       <Cursor />
       <BootScreen />
