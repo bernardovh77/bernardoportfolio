@@ -100,11 +100,11 @@ export const skillGroups: SkillGroup[] = [
     title: { en: "Frontend", pt: "Frontend" },
     skills: [
       { name: "HTML & CSS", tier: 3 },
-      { name: "JavaScript", tier: 3 },
-      { name: "TypeScript", tier: 2 },
-      { name: "React", tier: 2 },
-      { name: "Next.js", tier: 2 },
-      { name: "Tailwind CSS", tier: 2 },
+      { name: "JavaScript", tier: 2 },
+      { name: "TypeScript", tier: 1 },
+      { name: "React", tier: 1 },
+      { name: "Next.js", tier: 1 },
+      { name: "Tailwind CSS", tier: 1 },
       { name: "Three.js", tier: 1 },
     ],
   },
@@ -112,12 +112,12 @@ export const skillGroups: SkillGroup[] = [
     id: "backend",
     title: { en: "Backend", pt: "Backend" },
     skills: [
+      { name: "Java", tier: 3 },
+      { name: "C", tier: 3 },
       { name: "Node.js", tier: 2 },
       { name: "REST APIs", tier: 2 },
       { name: "Python", tier: 2 },
       { name: "SQL", tier: 2 },
-      { name: "PostgreSQL", tier: 1 },
-      { name: "Prisma", tier: 1 },
     ],
   },
   {
@@ -125,11 +125,10 @@ export const skillGroups: SkillGroup[] = [
     title: { en: "Tools", pt: "Ferramentas" },
     skills: [
       { name: "Git & GitHub", tier: 3 },
-      { name: "VS Code", tier: 3 },
-      { name: "Linux / WSL", tier: 2 },
+      { name: "Vim", tier: 3 },
+      { name: "Linux / WSL", tier: 3 },
+      { name: "VS Code", tier: 2 },
       { name: "Vercel", tier: 2 },
-      { name: "Figma", tier: 1 },
-      { name: "Docker", tier: 1 },
     ],
   },
 ];
@@ -279,20 +278,20 @@ export type JourneyEntry = {
 export const journey: JourneyEntry[] = [
   {
     id: "first-code",
-    year: "2023",
-    title: { en: "First lines of code", pt: "Primeiras linhas de código" },
+    year: "2024",
+    title: { en: "First interactions with code", pt: "Primeiros contatos com código" },
     text: {
-      en: "Placeholder. Built tiny games and pages just to see what would happen.",
-      pt: "Exemplo. Fiz jogos e páginas pequenas só para ver o que acontecia.",
+      en: "Placeholder. Tutorials, tiny experiments and a lot of trial and error.",
+      pt: "Exemplo. Tutoriais, pequenos experimentos e muita tentativa e erro.",
     },
   },
   {
-    id: "first-site",
+    id: "first-programs",
     year: "2025",
-    title: { en: "First full website", pt: "Primeiro site completo" },
+    title: { en: "First programs", pt: "Primeiros programas" },
     text: {
-      en: "Placeholder. Designed, built and deployed a site from scratch for a real person.",
-      pt: "Exemplo. Projetei, construí e publiquei um site do zero para uma pessoa de verdade.",
+      en: "Placeholder. Small programs written from start to finish, bugs included.",
+      pt: "Exemplo. Pequenos programas escritos do começo ao fim, com bugs e tudo.",
     },
   },
   {

@@ -110,6 +110,40 @@ function inputFor(graph: Graph, audio: HTMLAudioElement): GainNode | null {
   }
 }
 
+/**
+ * Resolves true once the audio graph is running, false if the browser keeps it
+ * suspended (some only let it start after the visitor's first click).
+ */
+function whenRunning(context: AudioContext, timeout = 800): Promise<boolean> {
+  if (context.state === "running") return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const timer = window.setTimeout(() => resolve(context.state === "running"), timeout);
+    context.resume().then(
+      () => {
+        window.clearTimeout(timer);
+        resolve(context.state === "running");
+      },
+      () => {
+        window.clearTimeout(timer);
+        resolve(false);
+      },
+    );
+  });
+}
+
+/**
+ * Whether the page may start sound on its own. Only some browsers (Firefox) can
+ * say so up front; the others answer when we try to play.
+ */
+function soundMayAutoplay() {
+  const nav = navigator as Navigator & { getAutoplayPolicy?: (type: "mediaelement") => string };
+  try {
+    return typeof nav.getAutoplayPolicy !== "function" || nav.getAutoplayPolicy("mediaelement") === "allowed";
+  } catch {
+    return true;
+  }
+}
+
 function rampParam(context: AudioContext, param: AudioParam, value: number, seconds: number) {
   const now = context.currentTime;
   param.cancelScheduledValues(now);
@@ -136,9 +170,10 @@ type Controller = { setSlot: (slot: Slot) => void };
 /**
  * Looping background music with a now-playing credit and a live equalizer.
  * The surface and the Underworks each have their own song, which cross-fade
- * as soon as you start traveling. Browsers block sound until the visitor
- * interacts, so it starts on the first click, tap or key press, fades in,
- * and remembers if the visitor mutes it.
+ * as soon as you start traveling. It starts as soon as the page opens where the
+ * browser allows it; browsers that block sound until the visitor interacts get it
+ * on the first click, tap or key press instead. It fades in, and remembers if the
+ * visitor mutes it.
  */
 export function MusicPlayer() {
   const { t, lang, theme, traveling } = useExperience();
@@ -177,6 +212,7 @@ export function MusicPlayer() {
     let request = 0; // the latest play or pause call wins
     let swap = 0; // the latest cross-fade wins
     let resumeOnShow = false;
+    let autoplayOnShow = false;
     let level = 0;
     let lastFrame = 0;
     const peaks = BANDS.map(() => 0.6);
@@ -289,21 +325,51 @@ export function MusicPlayer() {
       } else {
         audio.volume = 0;
       }
-      audio.play().then(
-        () => {
+      // Still blocked by the browser: try again on the visitor's next click
+      const blocked = () => {
+        if (id !== request || musicStore.getSnapshot() === "unavailable") return;
+        musicStore.setStatus("ready");
+        waitForGesture();
+      };
+      audio
+        .play()
+        .then(() => (graph ? whenRunning(graph.context) : true))
+        .then((running) => {
           if (id !== request) return;
+          if (!running) {
+            // The song started but the browser keeps the sound off until a click
+            audio.pause();
+            blocked();
+            return;
+          }
           stopWaiting();
           if (graph) setLevel(slot, TRACKS[slot].volume, 0.01);
           setMaster(1, FADE_IN);
           musicStore.setStatus("playing");
           cancelAnimationFrame(meterFrame);
           meterFrame = requestAnimationFrame(meter);
+        }, blocked);
+    };
+
+    // Without a click yet: ask the browser first with the song silent and not wired
+    // to Web Audio, so a refusal leaves nothing behind, and only then start it for real
+    const autoplay = () => {
+      if (!soundMayAutoplay()) {
+        musicStore.setStatus("ready");
+        return;
+      }
+      const id = ++request;
+      const audio = audioOf(active);
+      audio.volume = 0;
+      audio.play().then(
+        () => {
+          if (id === request) play();
+          // Paused in the meantime (from the terminal): don't leave the silent song running
+          else if (musicStore.getSnapshot() === "paused") audio.pause();
         },
         () => {
           if (id !== request || musicStore.getSnapshot() === "unavailable") return;
-          // Still blocked by the browser: try again on the visitor's next click
           musicStore.setStatus("ready");
-          waitForGesture();
         },
       );
     };
@@ -374,9 +440,21 @@ export function MusicPlayer() {
 
     const onReady = () => {
       if (musicStore.getSnapshot() !== "loading") return;
-      const wanted = readMusicPreference() === "on";
-      musicStore.setStatus(wanted ? "ready" : "paused");
-      if (wanted) waitForGesture();
+      if (readMusicPreference() === "off") {
+        musicStore.setStatus("paused");
+        return;
+      }
+      // Start right away where the browser lets a page play sound on its own
+      // (the player shows up once it plays), and otherwise on the visitor's
+      // first click, tap or key press
+      waitForGesture();
+      if (document.hidden) {
+        // Opened in a background tab: try once the visitor switches to it
+        autoplayOnShow = true;
+        musicStore.setStatus("ready");
+      } else {
+        autoplay();
+      }
     };
     const onError = () => {
       request++;
@@ -409,6 +487,9 @@ export function MusicPlayer() {
       } else if (resumeOnShow) {
         resumeOnShow = false;
         play();
+      } else if (autoplayOnShow) {
+        autoplayOnShow = false;
+        if (musicStore.getSnapshot() === "ready" && readMusicPreference() === "on") autoplay();
       }
     };
 
