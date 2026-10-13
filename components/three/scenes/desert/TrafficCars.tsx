@@ -94,7 +94,7 @@ function createCarMaterial() {
         } else {
           // Dark paint: sky light from above, a pink rim from the sunset
           float top = max(n.y, 0.0);
-          float fres = pow(1.0 - max(dot(n, V), 0.0), 3.0);
+          float fres = pow(clamp(1.0 - dot(n, V), 0.0, 1.0), 3.0);
           vec3 light = vec3(0.3, 0.18, 0.42) + uSky * top + uHorizon * fres * 1.6;
           col = vColor * light;
           if (kind == 1) col += uHorizon * fres * 0.12 + vec3(0.012, 0.006, 0.02);

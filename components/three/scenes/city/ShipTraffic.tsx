@@ -122,7 +122,7 @@ function createHullMaterial() {
           // Neon accents in the engines' color
           col = vEngine * 2.2;
         } else {
-          float fres = pow(1.0 - max(dot(n, V), 0.0), 3.0);
+          float fres = pow(clamp(1.0 - dot(n, V), 0.0, 1.0), 3.0);
           vec3 neon = mix(uRimA, uRimB, 0.5 + 0.5 * n.x);
           vec3 light = vec3(0.08, 0.08, 0.14) + uSky * max(n.y, 0.0) + uGround * max(-n.y, 0.0) + neon * (0.2 + fres * 1.6);
           col = vColor * light;
@@ -213,8 +213,9 @@ function createGlowMaterial() {
       void main() {
         float glow;
         if (vPart < 1.5) {
-          // Hot near the nozzle, thinning out behind, flickering a little
-          float u = vCorner.x;
+          // Hot near the nozzle, thinning out behind, flickering a little.
+          // Clamped: at antialiased edges u can land a hair past 1, and pow() of a negative is NaN
+          float u = clamp(vCorner.x, 0.0, 1.0);
           float flicker = 0.85 + 0.15 * sin(uTime * 37.0 + u * 9.0);
           glow = pow(1.0 - u, 1.8) * exp(-vCorner.y * vCorner.y * 3.2) * 1.4 * flicker;
         } else {

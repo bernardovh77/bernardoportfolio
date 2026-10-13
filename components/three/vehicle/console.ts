@@ -157,13 +157,14 @@ export function createCabinMaterial(lights: CabinLights) {
           col = vColor * light;
           if (kind == 2) {
             // Glossy trim: a rim of light at grazing angles
-            float f = pow(1.0 - max(dot(n, V), 0.0), 4.0);
+            float f = pow(clamp(1.0 - dot(n, V), 0.0, 1.0), 4.0);
             col += uRim * f * 0.06;
             if (uReflect > 0.0) {
               // A glossy coat mirroring the city: streets below, haze above, neon signs sliding past
               vec3 R = reflect(-V, n);
               vec3 env = mix(uEnvLow, uEnvHigh, smoothstep(-0.25, 0.35, R.y));
-              float angle = atan(R.x, -R.z);
+              // (atan of 0, 0 is undefined: straight up or down there is no angle)
+              float angle = dot(R.xz, R.xz) > 1e-8 ? atan(R.x, -R.z) : 0.0;
               float band = pow(max(sin(angle * 9.0 + uFlow * 0.11), 0.0), 18.0) * (1.0 - smoothstep(0.2, 0.75, abs(R.y)));
               env += mix(uEnvA, uEnvB, step(0.0, sin(angle * 4.5 + uFlow * 0.055 + 1.3))) * band * 2.0;
               col += env * uReflect * (0.25 + f * 0.75);

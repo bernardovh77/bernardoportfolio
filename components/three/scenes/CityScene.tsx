@@ -956,7 +956,7 @@ function Searchlights({ active, ride }: { active: boolean; ride: RefObject<CityR
               varying vec3 vViewV;
               void main() {
                 float facing = abs(dot(normalize(vNormalV), normalize(vViewV)));
-                float a = pow(facing, 2.0) * pow(1.0 - vH, 1.4) * 0.2;
+                float a = pow(facing, 2.0) * pow(max(1.0 - vH, 0.0), 1.4) * 0.2;
                 vec3 col = BEAM_COLOR == 0 ? uColA : uColB;
                 gl_FragColor = vec4(col * a, a);
                 ${outputGLSL}

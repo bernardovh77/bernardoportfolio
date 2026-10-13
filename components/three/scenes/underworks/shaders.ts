@@ -341,7 +341,7 @@ varying vec2 vShaft;
 void main() {
   float across = vUv.x * 2.0 - 1.0;
   float body = exp(-across * across * 3.2);
-  float along = pow(1.0 - vUv.y, 1.6) * smoothstep(0.0, 0.06, vUv.y);
+  float along = pow(max(1.0 - vUv.y, 0.0), 1.6) * smoothstep(0.0, 0.06, vUv.y);
   // The fan's blades cut through the light (a slow, soft pulse)
   float blades = 0.62 + 0.38 * smoothstep(-0.3, 0.7, sin(uTime * 2.3 + vShaft.x));
   vec3 col = uSkyLight * body * along * blades * vShaft.y;

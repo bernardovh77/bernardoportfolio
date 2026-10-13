@@ -262,7 +262,7 @@ function WaterSurface({ active, tier }: SceneProps) {
             float facing = max(dot(R, L), 0.0);
             float spec = pow(facing, 900.0);
             float sheen = pow(facing, 40.0);
-            float fres = pow(1.0 - max(dot(N, V), 0.0), 5.0);
+            float fres = pow(clamp(1.0 - dot(N, V), 0.0, 1.0), 5.0);
             vec3 col = vec3(0.003, 0.012, 0.03);
             col += uGlow * fres * 0.6;
             float dist = length(vWorld - cameraPosition);
@@ -499,7 +499,7 @@ function Moon({ active }: { active: boolean }) {
             ${simplexGLSL}
             void main() {
               vec3 n = normalize(vObj);
-              float fres = pow(1.0 - max(dot(normalize(vNormalV), normalize(vViewV)), 0.0), 2.6);
+              float fres = pow(clamp(1.0 - dot(normalize(vNormalV), normalize(vViewV)), 0.0, 1.0), 2.6);
               float lat = asin(clamp(n.y, -1.0, 1.0));
               float lon = atan(n.z, n.x) + uTime * 0.03;
               vec2 g = vec2(lon / 6.28318 * 28.0, lat / 3.14159 * 14.0);

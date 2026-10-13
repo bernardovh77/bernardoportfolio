@@ -282,7 +282,7 @@ export function createMirrorMaterial(cars: Float32Array) {
         vec3 hit = ro + rd * t;
         vec3 groundCol = applyFog(ground(hit), t);
         // Our own tail lights tint the road right behind us
-        groundCol += vec3(1.0, 0.06, 0.12) * exp(-max(t - 2.0, 0.0) * 0.35) * exp(-pow(hit.x - uCarX, 2.0) * 0.8) * 0.12;
+        groundCol += vec3(1.0, 0.06, 0.12) * exp(-max(t - 2.0, 0.0) * 0.35) * exp(-(hit.x - uCarX) * (hit.x - uCarX) * 0.8) * 0.12;
 
         // Sky, and the mountains walling in the valley behind us
         vec3 skyCol = sky(rd);
@@ -340,14 +340,15 @@ export function createMirrorMaterial(cars: Float32Array) {
           vec3 cabin = mix(vec3(0.006, 0.003, 0.012), vec3(0.028, 0.011, 0.04), vUv.y);
           col = mix(cabin, col, open * (1.0 - rests));
           // Neon line along the roof edge, reflected
-          col += uColA * 0.35 * exp(-pow((vUv.y - 0.94) * 30.0, 2.0));
+          float rim = (vUv.y - 0.94) * 30.0;
+          col += uColA * 0.35 * exp(-rim * rim);
         } else {
           // Side mirrors: our own car's flank along the inner edge
           float inner = kind < 1.5 ? vUv.x : 1.0 - vUv.x;
           float edgeLine = 0.8 + (vUv.y - 0.5) * 0.08;
           float body = smoothstep(edgeLine - 0.012, edgeLine + 0.012, inner);
           vec3 paint = mix(vec3(0.02, 0.008, 0.035), vec3(0.11, 0.045, 0.15), smoothstep(0.1, 0.9, vUv.y));
-          vec3 stripe = (kind < 1.5 ? uColA : vec3(0.1, 0.95, 1.0)) * exp(-pow((vUv.y - 0.4) * 36.0, 2.0)) * 1.3;
+          vec3 stripe = (kind < 1.5 ? uColA : vec3(0.1, 0.95, 1.0)) * exp(-(vUv.y - 0.4) * (vUv.y - 0.4) * 1296.0) * 1.3;
           col = mix(col, paint + stripe, body);
         }
 
