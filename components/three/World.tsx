@@ -18,8 +18,9 @@ import {
   ToneMappingMode,
 } from "postprocessing";
 import { Euler, type PerspectiveCamera, Quaternion, Vector2, Vector3 } from "three";
-import { CAR_POSITION, cabinCamera, carMotion } from "@/lib/car/cabin";
-import { drive, settleAmount, viewAmount } from "@/lib/drive";
+import { CAR_CABIN, cabinCamera } from "@/lib/car/cabin";
+import { SHIP_CABIN } from "@/lib/car/ship";
+import { drive, settleAmount, VEHICLE_DISTRICT, viewAmount } from "@/lib/drive";
 import { onScrollProgress } from "@/lib/scroll";
 import { THEMES, type ThemeId } from "@/lib/themes";
 import {
@@ -44,8 +45,9 @@ const CAMERA_PATHS = {
 
 const BASE_FOV = 55;
 const NEAR = 0.5;
-/** Inside the car the dashboard is a few centimeters away. */
+/** Inside a vehicle the dashboard is a few centimeters away. */
 const CABIN_NEAR = 0.05;
+const CABINS = { car: CAR_CABIN, ship: SHIP_CABIN };
 
 /** Moves the camera along the active district's path, with pointer parallax and the travel warp. */
 function CameraRig({ theme }: { theme: ThemeId }) {
@@ -56,10 +58,10 @@ function CameraRig({ theme }: { theme: ThemeId }) {
     theme: null as ThemeId | null,
     parallaxX: 0,
     parallaxY: 0,
-    // Riding in the car
+    // Riding
     headX: 0,
     headY: 0,
-    motion: { y: 0, pitch: 0, roll: 0 },
+    motion: { x: 0, y: 0, pitch: 0, yaw: 0, roll: 0 },
     carEuler: new Euler(),
     carQuat: new Quaternion(),
     localPos: new Vector3(),
@@ -70,15 +72,17 @@ function CameraRig({ theme }: { theme: ThemeId }) {
     const camera = state.camera as PerspectiveCamera;
     const r = rig.current;
 
-    if (drive.inside && theme === "desert") {
-      // First person, in the driver's seat: the car's body moves, the head follows the pointer
+    if (drive.inside && theme === VEHICLE_DISTRICT[drive.vehicle]) {
+      // First person, in the seat: the vehicle's body moves, the head follows the pointer
+      const cabin = CABINS[drive.vehicle];
       const k = 1 - Math.exp(-Math.min(delta, 0.1) * 3);
       const free = world.reducedMotion ? 0 : 1;
       r.headX += (world.pointerX * free - r.headX) * k;
       r.headY += (world.pointerY * free - r.headY) * k;
       const now = performance.now();
-      const m = carMotion(state.clock.elapsedTime, world.reducedMotion, r.motion);
+      const m = cabin.motion(state.clock.elapsedTime, world.reducedMotion, r.motion);
       const fov = cabinCamera(
+        cabin,
         viewAmount(now),
         settleAmount(now),
         camera.aspect,
@@ -89,8 +93,9 @@ function CameraRig({ theme }: { theme: ThemeId }) {
         r.localPos,
         r.localQuat,
       );
-      r.carQuat.setFromEuler(r.carEuler.set(m.pitch, 0, m.roll));
-      camera.position.copy(r.localPos).applyQuaternion(r.carQuat).add(CAR_POSITION);
+      r.carQuat.setFromEuler(r.carEuler.set(m.pitch, m.yaw, m.roll));
+      camera.position.copy(r.localPos).applyQuaternion(r.carQuat).add(cabin.position);
+      camera.position.x += m.x;
       camera.position.y += m.y;
       camera.quaternion.copy(r.carQuat).multiply(r.localQuat);
       camera.fov = fov + travelEnvelope(now) * 24;

@@ -2,12 +2,18 @@ import { BufferAttribute, BufferGeometry, Color, Quaternion, Vector3 } from "thr
 
 /**
  * Builds a mesh out of simple pieces (boxes, beams, profiles pulled across, rings,
- * cylinders) merged into one geometry. Every vertex carries a color (`aColor`, linear)
- * and a "kind" (`aKind`) that the material's shader decodes: the car's cabin uses it
- * for matte / neon / glossy surfaces, the traffic cars for body / glass / lights.
+ * cylinders, lofted hulls) merged into one geometry. Every vertex carries a color
+ * (`aColor`, linear) and a "kind" (`aKind`) that the material's shader decodes:
+ * the cabins use it for matte / neon / glossy surfaces and blinking lights,
+ * the traffic for body / glass / lights.
  */
 
-export const KIND = { matte: 0, neon: 1, gloss: 2, mirror: 3 } as const;
+export const KIND = { matte: 0, neon: 1, gloss: 2, blink: 3 } as const;
+
+/** Kind for a blinking light with its own phase (0..1): the phase rides along in the kind value. */
+export function blinking(phase: number) {
+  return KIND.blink + 0.4 * (phase - Math.floor(phase));
+}
 
 const _ab = new Vector3();
 const _ac = new Vector3();
@@ -222,6 +228,21 @@ export class PartBuilder {
     return this;
   }
 
+  /** A flat disc (the end of a cylinder, a nozzle) facing `axis`. */
+  disc(center: Vector3, axis: Vector3, radius: number, sides = 12) {
+    const n = axis.clone().normalize();
+    const u = new Vector3(0, 0, 1).cross(n);
+    if (u.lengthSq() < 1e-6) u.set(1, 0, 0);
+    u.normalize();
+    const v = new Vector3().crossVectors(n, u).normalize();
+    const rim = (i: number) => {
+      const t = (i / sides) * Math.PI * 2;
+      return center.clone().addScaledVector(u, Math.cos(t) * radius).addScaledVector(v, Math.sin(t) * radius);
+    };
+    for (let i = 0; i < sides; i++) this.tri(center, rim(i), rim(i + 1));
+    return this;
+  }
+
   /** A flat rectangle centered at `center`, spanned by `right` and `up`. */
   panel(center: Vector3, right: Vector3, up: Vector3, width: number, height: number) {
     const r = right.clone().multiplyScalar(width / 2);
@@ -276,6 +297,27 @@ export class PartBuilder {
       this.tri(frontCenter, front[i], front[j]);
       this.tri(backCenter, back[j], back[i]);
       this.quad(back[i], back[j], front[j], front[i]);
+    }
+    return this;
+  }
+
+  /**
+   * A skin stretched over cross-sections (each a row of points, all rows the same
+   * length), like the hull of a ship: flat facets between neighboring rows.
+   */
+  loft(sections: Vector3[][]) {
+    for (let i = 0; i < sections.length - 1; i++) {
+      const a = sections[i];
+      const b = sections[i + 1];
+      for (let j = 0; j < a.length - 1; j++) this.quad(a[j], a[j + 1], b[j + 1], b[j]);
+    }
+    return this;
+  }
+
+  /** Beams along a polyline (struts that follow a curve). */
+  polyBeam(points: Vector3[], width: number, depth = width, upHint?: (index: number) => Vector3) {
+    for (let i = 0; i < points.length - 1; i++) {
+      this.beam(points[i], points[i + 1], width, depth, upHint?.(i));
     }
     return this;
   }

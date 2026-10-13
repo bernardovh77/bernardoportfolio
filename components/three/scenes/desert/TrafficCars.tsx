@@ -12,7 +12,7 @@ import {
   ShaderMaterial,
 } from "three";
 import { CAR_POSITION } from "@/lib/car/cabin";
-import { drive } from "@/lib/drive";
+import { ridingIn } from "@/lib/drive";
 import { THEMES } from "@/lib/themes";
 import { fogGLSL, outputGLSL } from "../../glsl";
 import { buildTrafficCar, buildTrafficGlow, trafficData, trafficGLSL } from "./traffic";
@@ -191,8 +191,8 @@ export function TrafficCars({ tier, travel }: { tier: "high" | "low"; travel: Re
   useFrame((state) => {
     const group = groupRef.current;
     if (!group) return;
-    group.visible = drive.inside;
-    if (!drive.inside) return;
+    group.visible = ridingIn("car");
+    if (!group.visible) return;
     for (const mesh of [carsRef.current, glowRef.current]) {
       const material = mesh?.material as ShaderMaterial | undefined;
       if (!material) continue;

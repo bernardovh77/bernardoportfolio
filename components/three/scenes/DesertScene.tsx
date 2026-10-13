@@ -20,7 +20,7 @@ import {
 } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { CAR_POSITION } from "@/lib/car/cabin";
-import { drive, driveStore } from "@/lib/drive";
+import { drive, driveStore, ridingIn } from "@/lib/drive";
 import { THEMES } from "@/lib/themes";
 import { createRandom } from "@/lib/random";
 import { world } from "@/lib/world";
@@ -61,9 +61,10 @@ function useTravel(active: boolean) {
     if (!activeRef.current) return;
     const dt = Math.min(delta, 0.1);
     const boost = Math.min(Math.abs(world.velocity) * 2.2, 90);
-    const cruise = drive.inside ? 34 : 18;
-    const base = world.reducedMotion ? (drive.inside ? 8 : 3) : cruise;
-    speed.current += (base + boost - speed.current) * (1 - Math.exp(-dt * (drive.inside ? 0.8 : 2.5)));
+    const inCar = ridingIn("car");
+    const cruise = inCar ? 34 : 18;
+    const base = world.reducedMotion ? (inCar ? 8 : 3) : cruise;
+    speed.current += (base + boost - speed.current) * (1 - Math.exp(-dt * (inCar ? 0.8 : 2.5)));
     travel.current += speed.current * dt;
     drive.speed = speed.current * KMH;
   });
@@ -433,7 +434,7 @@ function HighwayTraffic({
     const mesh = meshRef.current;
     if (!activeRef.current || !mesh) return;
     // In the car, real cars take over (TrafficCars)
-    mesh.visible = !drive.inside;
+    mesh.visible = !ridingIn("car");
     const m = mesh.material as ShaderMaterial;
     m.uniforms.uTime.value = state.clock.elapsedTime;
     m.uniforms.uTravel.value = travel.current;
@@ -586,7 +587,7 @@ function Dust({ active, travel }: { active: boolean; travel: RefObject<number> }
     if (!activeRef.current || !m) return;
     m.uniforms.uTime.value = state.clock.elapsedTime;
     m.uniforms.uTravel.value = travel.current;
-    m.uniforms.uCar.value[2] = drive.inside ? 1 : 0;
+    m.uniforms.uCar.value[2] = ridingIn("car") ? 1 : 0;
   });
 
   return (
@@ -647,7 +648,7 @@ function Dust({ active, travel }: { active: boolean; travel: RefObject<number> }
 export default function DesertScene({ active, tier }: SceneProps) {
   const travel = useTravel(active);
   // The car is only built once someone hitches a ride
-  const { visited } = useSyncExternalStore(
+  const { carVisited } = useSyncExternalStore(
     driveStore.subscribe,
     driveStore.getSnapshot,
     driveStore.getServerSnapshot,
@@ -675,8 +676,8 @@ export default function DesertScene({ active, tier }: SceneProps) {
       <HighwayTraffic active={active} tier={tier} travel={travel} />
       <Dust active={active} travel={travel} />
       <ExitSign active={active} travel={travel} />
-      {visited && <TrafficCars tier={tier} travel={travel} />}
-      {visited && <CarInterior tier={tier} travel={travel} />}
+      {carVisited && <TrafficCars tier={tier} travel={travel} />}
+      {carVisited && <CarInterior tier={tier} travel={travel} />}
     </group>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { type RefObject, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { useFrame } from "@react-three/fiber";
 import { MeshReflectorMaterial } from "@react-three/drei";
 import {
@@ -19,10 +19,27 @@ import {
   type ShaderMaterial,
   type Vector3,
 } from "three";
+import { drive, driveStore, ridingIn } from "@/lib/drive";
 import { THEMES } from "@/lib/themes";
 import { createRandom } from "@/lib/random";
+import { world } from "@/lib/world";
 import { fogGLSL, hashGLSL, outputGLSL } from "../glsl";
 import { createSignAtlas, SkyDome, type SceneProps, useActiveRef, useFontsReady } from "../shared";
+import {
+  BLOCK_COUNT,
+  BLOCK_LENGTH,
+  BLOCK_PITCH,
+  blockAnchor,
+  cityFlow,
+  cityFlowGLSL,
+  type CityRide,
+  CROSS_STREET,
+  FIRST_BLOCK,
+  STATIC_ANCHOR,
+} from "./city/flow";
+import { ShipInterior } from "./city/ShipInterior";
+import { ShipTraffic } from "./city/ShipTraffic";
+import { BOARD_W, type BoardSpot, TaxiBoard } from "./city/TaxiBoard";
 
 const THEME = THEMES.city;
 const P = THEME.palette;
@@ -58,6 +75,10 @@ type Building = {
   /** 0 = lines the avenue, higher numbers are further away */
   column: number;
   side: number;
+  /** Center of the block it stands on (everything on a block flows together while riding) */
+  anchor: number;
+  /** Height of the whole stack it is part of (it rises out of the street by this much) */
+  stack: number;
 };
 
 const AVENUE_HALF_WIDTH = 9;
@@ -66,12 +87,12 @@ const LANDMARK_Z = -345;
 function generateCity(tier: SceneProps["tier"]): Building[] {
   const rnd = createRandom(2077);
   const list: Building[] = [];
-  const blockLength = 26;
-  const crossStreet = 9;
+  const blockLength = BLOCK_LENGTH;
   const columns = tier === "high" ? 5 : 3;
 
   for (const side of [-1, 1]) {
-    for (let z0 = 34; z0 > -300; z0 -= blockLength + crossStreet) {
+    for (let z0 = FIRST_BLOCK; z0 > FIRST_BLOCK - BLOCK_COUNT * BLOCK_PITCH; z0 -= blockLength + CROSS_STREET) {
+      const anchor = blockAnchor(z0);
       let x0 = AVENUE_HALF_WIDTH;
       for (let column = 0; column < columns; column++) {
         const columnWidth = rnd.range(9, 16);
@@ -85,9 +106,11 @@ function generateCity(tier: SceneProps["tier"]): Building[] {
           if (rnd.chance(0.07)) h = rnd.range(95, 160);
           const x = side * (x0 + columnWidth / 2);
           const z = zc - depth / 2;
-          list.push({ x, y: h / 2, z, w, h, d, seed: rnd.next(), style: rnd.next(), column, side });
+          const base: Building = { x, y: h / 2, z, w, h, d, seed: rnd.next(), style: rnd.next(), column, side, anchor, stack: h };
+          list.push(base);
           if (h > 30 && rnd.chance(0.38)) {
             const h2 = rnd.range(8, 34);
+            base.stack = h + h2;
             list.push({
               x: x + rnd.range(-1, 1),
               y: h + h2 / 2,
@@ -99,6 +122,8 @@ function generateCity(tier: SceneProps["tier"]): Building[] {
               style: rnd.next(),
               column: column + 10,
               side,
+              anchor,
+              stack: h + h2,
             });
           }
           zc -= depth;
@@ -127,6 +152,8 @@ function generateCity(tier: SceneProps["tier"]): Building[] {
       style: rnd.next(),
       column: 20,
       side: Math.sign(x),
+      anchor: STATIC_ANCHOR,
+      stack: h,
     });
   }
 
@@ -142,6 +169,8 @@ function generateCity(tier: SceneProps["tier"]): Building[] {
     style: 0.1,
     column: 30,
     side: 0,
+    anchor: STATIC_ANCHOR,
+    stack: 320,
   });
   list.push({
     x: 0,
@@ -154,9 +183,28 @@ function generateCity(tier: SceneProps["tier"]): Building[] {
     style: 0.4,
     column: 30,
     side: 0,
+    anchor: STATIC_ANCHOR,
+    stack: 320,
   });
 
   return list;
+}
+
+/**
+ * The SKY TAXI board hangs off the first tower of the second block on the right,
+ * high up, so from the top of the page it shows beside the hero's title.
+ */
+function taxiBoardSpot(buildings: Building[]): BoardSpot {
+  const tower = buildings.find((b) => b.column === 0 && b.side === 1 && b.z + b.d / 2 < 0 && b.z + b.d / 2 > -6);
+  const wall = tower ? Math.abs(tower.x) - tower.w / 2 : 9.8;
+  return {
+    x: wall - 0.35 - BOARD_W / 2,
+    z: (tower ? tower.z + tower.d / 2 : -1.6) - 1.1,
+    top: Math.min(15.2, (tower?.h ?? 20) - 0.6),
+    wall,
+    anchor: tower?.anchor ?? blockAnchor(FIRST_BLOCK - BLOCK_PITCH),
+    stack: tower?.stack ?? 20,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -165,18 +213,27 @@ function generateCity(tier: SceneProps["tier"]): Building[] {
 
 const buildingVertex = /* glsl */ `
 attribute vec2 aSeed;
+// Block anchor and stack height (see ./city/flow.ts)
+attribute vec2 aFlow;
+${cityFlowGLSL}
 varying vec3 vWorld;
 varying vec3 vLocal;
 varying vec3 vNormalW;
 varying vec3 vScale;
 varying vec2 vSeed;
+varying float vDist;
 void main() {
   vec4 worldPos = modelMatrix * instanceMatrix * vec4(position, 1.0);
+  // Windows and trims are drawn where the building stands on the page, so they ride along with it
   vWorld = worldPos.xyz;
   vLocal = position;
   vScale = vec3(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz), length(instanceMatrix[2].xyz));
   vNormalW = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * normal);
   vSeed = aSeed;
+  vec2 flow = cityFlow(aFlow.x);
+  worldPos.z += flow.x;
+  worldPos.y -= (1.0 - flow.y) * (aFlow.y + 2.0);
+  vDist = length(worldPos.xyz - cameraPosition);
   gl_Position = projectionMatrix * viewMatrix * worldPos;
 }
 `;
@@ -190,6 +247,7 @@ varying vec3 vLocal;
 varying vec3 vNormalW;
 varying vec3 vScale;
 varying vec2 vSeed;
+varying float vDist;
 ${fogGLSL}
 ${hashGLSL}
 
@@ -197,7 +255,7 @@ void main() {
   vec3 n = normalize(vNormalW);
   float seed = vSeed.x;
   float style = vSeed.y;
-  float distCam = length(vWorld - cameraPosition);
+  float distCam = vDist;
   vec3 col = vec3(0.012, 0.014, 0.032);
 
   if (abs(n.y) < 0.5) {
@@ -290,12 +348,20 @@ function useCityUniforms() {
       uSignal: { value: new Color(P.signal) },
       uFogColor: { value: new Color(P.fog) },
       uFogDensity: { value: THEME.fogDensity },
+      uRide: { value: 0 },
+      uTravel: { value: 0 },
     }),
     [],
   );
 }
 
-function Buildings({ data, active }: { data: Building[]; active: boolean }) {
+/** Riding: the avenue flows past the ship (see ./city/flow.ts). */
+function setFlow(material: ShaderMaterial, ride: CityRide) {
+  material.uniforms.uRide.value = ride.riding ? 1 : 0;
+  material.uniforms.uTravel.value = ride.travel;
+}
+
+function Buildings({ data, active, ride }: { data: Building[]; active: boolean; ride: RefObject<CityRide> }) {
   const meshRef = useRef<InstancedMesh>(null);
   const materialRef = useRef<ShaderMaterial>(null);
   const activeRef = useActiveRef(active);
@@ -304,11 +370,15 @@ function Buildings({ data, active }: { data: Building[]; active: boolean }) {
   const geometry = useMemo(() => {
     const g = new BoxGeometry(1, 1, 1);
     const seeds = new Float32Array(data.length * 2);
+    const flow = new Float32Array(data.length * 2);
     data.forEach((b, i) => {
       seeds[i * 2] = b.seed;
       seeds[i * 2 + 1] = b.style;
+      flow[i * 2] = b.anchor;
+      flow[i * 2 + 1] = b.stack;
     });
     g.setAttribute("aSeed", new InstancedBufferAttribute(seeds, 2));
+    g.setAttribute("aFlow", new InstancedBufferAttribute(flow, 2));
     return g;
   }, [data]);
 
@@ -329,6 +399,7 @@ function Buildings({ data, active }: { data: Building[]; active: boolean }) {
   useFrame((state) => {
     if (!activeRef.current || !materialRef.current) return;
     materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+    setFlow(materialRef.current, ride.current);
   });
 
   return (
@@ -356,6 +427,9 @@ type Sign = {
   rect: [number, number, number, number];
   color: string;
   seed: number;
+  /** The block it hangs on and how tall that building is (see Building) */
+  anchor: number;
+  stack: number;
 };
 
 function generateSigns(buildings: Building[], tier: SceneProps["tier"]): Sign[] {
@@ -384,6 +458,8 @@ function generateSigns(buildings: Building[], tier: SceneProps["tier"]): Sign[] 
           rect: [v / 8, 0.5, 1 / 8, 0.5],
           color: rnd.pick(colors),
           seed: rnd.next(),
+          anchor: b.anchor,
+          stack: b.stack,
         });
       }
     }
@@ -400,6 +476,8 @@ function generateSigns(buildings: Building[], tier: SceneProps["tier"]): Sign[] 
         rect: [(hIndex % 2) * 0.5, (3 - Math.floor(hIndex / 2)) * 0.125, 0.5, 0.125],
         color: rnd.pick(colors),
         seed: rnd.next(),
+        anchor: b.anchor,
+        stack: b.stack,
       });
     }
   }
@@ -414,6 +492,8 @@ function generateSigns(buildings: Building[], tier: SceneProps["tier"]): Sign[] 
     rect: [0, 3 * 0.125, 0.5, 0.125],
     color: P.a,
     seed: 0.33,
+    anchor: STATIC_ANCHOR,
+    stack: 320,
   });
   signs.push({
     x: 0,
@@ -424,11 +504,13 @@ function generateSigns(buildings: Building[], tier: SceneProps["tier"]): Sign[] 
     rect: [0, 0.5, 1 / 8, 0.5],
     color: P.b,
     seed: 0.21,
+    anchor: STATIC_ANCHOR,
+    stack: 320,
   });
   return signs;
 }
 
-function Signs({ data, active }: { data: Sign[]; active: boolean }) {
+function Signs({ data, active, ride }: { data: Sign[]; active: boolean; ride: RefObject<CityRide> }) {
   const meshRef = useRef<InstancedMesh>(null);
   const materialRef = useRef<ShaderMaterial>(null);
   const activeRef = useActiveRef(active);
@@ -440,16 +522,20 @@ function Signs({ data, active }: { data: Sign[]; active: boolean }) {
     const rects = new Float32Array(data.length * 4);
     const colors = new Float32Array(data.length * 3);
     const seeds = new Float32Array(data.length);
+    const flow = new Float32Array(data.length * 2);
     const c = new Color();
     data.forEach((s, i) => {
       rects.set(s.rect, i * 4);
       c.set(s.color);
       colors.set([c.r, c.g, c.b], i * 3);
       seeds[i] = s.seed;
+      flow[i * 2] = s.anchor;
+      flow[i * 2 + 1] = s.stack;
     });
     g.setAttribute("aRect", new InstancedBufferAttribute(rects, 4));
     g.setAttribute("aColor", new InstancedBufferAttribute(colors, 3));
     g.setAttribute("aSeed", new InstancedBufferAttribute(seeds, 1));
+    g.setAttribute("aFlow", new InstancedBufferAttribute(flow, 2));
     return g;
   }, [data]);
 
@@ -459,6 +545,8 @@ function Signs({ data, active }: { data: Sign[]; active: boolean }) {
       uAtlas: { value: atlas.texture },
       uFogColor: { value: new Color(P.fog) },
       uFogDensity: { value: THEME.fogDensity },
+      uRide: { value: 0 },
+      uTravel: { value: 0 },
     }),
     [atlas],
   );
@@ -480,6 +568,7 @@ function Signs({ data, active }: { data: Sign[]; active: boolean }) {
   useFrame((state) => {
     if (!activeRef.current || !materialRef.current) return;
     materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+    setFlow(materialRef.current, ride.current);
   });
 
   return (
@@ -493,6 +582,8 @@ function Signs({ data, active }: { data: Sign[]; active: boolean }) {
           attribute vec4 aRect;
           attribute vec3 aColor;
           attribute float aSeed;
+          attribute vec2 aFlow;
+          ${cityFlowGLSL}
           varying vec2 vUv;
           varying vec2 vLocalUv;
           varying vec3 vColor;
@@ -504,6 +595,9 @@ function Signs({ data, active }: { data: Sign[]; active: boolean }) {
             vColor = aColor;
             vSeed = aSeed;
             vec4 w = modelMatrix * instanceMatrix * vec4(position, 1.0);
+            vec2 flow = cityFlow(aFlow.x);
+            w.z += flow.x;
+            w.y -= (1.0 - flow.y) * (aFlow.y + 2.0);
             vDist = length(w.xyz - cameraPosition);
             gl_Position = projectionMatrix * viewMatrix * w;
           }
@@ -543,7 +637,8 @@ function Signs({ data, active }: { data: Sign[]; active: boolean }) {
 /* Flying traffic                                                      */
 /* ------------------------------------------------------------------ */
 
-function Traffic({ active, tier }: { active: boolean; tier: SceneProps["tier"] }) {
+function Traffic({ active, tier, ride }: { active: boolean; tier: SceneProps["tier"]; ride: RefObject<CityRide> }) {
+  const meshRef = useRef<InstancedMesh>(null);
   const materialRef = useRef<ShaderMaterial>(null);
   const activeRef = useActiveRef(active);
   const perLane = tier === "high" ? 26 : 14;
@@ -603,10 +698,12 @@ function Traffic({ active, tier }: { active: boolean; tier: SceneProps["tier"] }
   useFrame((state) => {
     if (!activeRef.current || !materialRef.current) return;
     materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+    // In the sky taxi, real ships take over (./city/ShipTraffic.tsx)
+    if (meshRef.current) meshRef.current.visible = !ride.current.riding;
   });
 
   return (
-    <instancedMesh args={[geometry, undefined, count]} frustumCulled={false}>
+    <instancedMesh ref={meshRef} args={[geometry, undefined, count]} frustumCulled={false}>
       <shaderMaterial
         ref={materialRef}
         uniforms={uniforms}
@@ -666,7 +763,7 @@ function Traffic({ active, tier }: { active: boolean; tier: SceneProps["tier"] }
 /* Rain                                                                */
 /* ------------------------------------------------------------------ */
 
-function Rain({ active, tier }: { active: boolean; tier: SceneProps["tier"] }) {
+function Rain({ active, tier, ride }: { active: boolean; tier: SceneProps["tier"]; ride: RefObject<CityRide> }) {
   const materialRef = useRef<ShaderMaterial>(null);
   const activeRef = useActiveRef(active);
   const count = tier === "high" ? 5200 : 2200;
@@ -695,6 +792,9 @@ function Rain({ active, tier }: { active: boolean; tier: SceneProps["tier"] }) {
     () => ({
       uTime: { value: 0 },
       uColor: { value: new Color("#9fc9ff") },
+      uRide: { value: 0 },
+      uTravel: { value: 0 },
+      uWind: { value: 0 },
     }),
     [],
   );
@@ -703,7 +803,11 @@ function Rain({ active, tier }: { active: boolean; tier: SceneProps["tier"] }) {
 
   useFrame((state) => {
     if (!activeRef.current || !materialRef.current) return;
-    materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+    const u = materialRef.current.uniforms;
+    u.uTime.value = state.clock.elapsedTime;
+    u.uRide.value = ride.current.riding ? 1 : 0;
+    u.uTravel.value = ride.current.travel;
+    u.uWind.value = ride.current.riding ? ride.current.speed : 0;
   });
 
   return (
@@ -717,6 +821,9 @@ function Rain({ active, tier }: { active: boolean; tier: SceneProps["tier"] }) {
         vertexShader={
           /* glsl */ `
           uniform float uTime;
+          uniform float uRide;
+          uniform float uTravel;
+          uniform float uWind;
           attribute vec3 aSeed;
           attribute float aEnd;
           varying float vAlpha;
@@ -725,11 +832,13 @@ function Rain({ active, tier }: { active: boolean; tier: SceneProps["tier"] }) {
             float speed = 26.0 + aSeed.x * 10.0;
             vec3 p = aSeed * box;
             p.y -= uTime * speed;
+            // Flying through it: the drops rush past the ship
+            p.z += uTravel;
             // Wrap the drops around the camera so it is always raining around you
             vec3 origin = cameraPosition - vec3(box.x * 0.5, box.y * 0.45, box.z * 0.75);
             vec3 local = mod(p - origin, box);
             vec3 worldPos = origin + local;
-            vec3 streak = vec3(-0.12, -1.0, 0.04) * (0.55 + aSeed.z * 0.6);
+            vec3 streak = vec3(-0.12, -1.0, 0.04 + uWind / speed) * (0.55 + aSeed.z * 0.6);
             worldPos += streak * aEnd;
             float edge = smoothstep(0.0, 4.0, local.x) * (1.0 - smoothstep(box.x - 4.0, box.x, local.x))
                        * smoothstep(0.0, 4.0, local.z) * (1.0 - smoothstep(box.z - 4.0, box.z, local.z))
@@ -737,6 +846,8 @@ function Rain({ active, tier }: { active: boolean; tier: SceneProps["tier"] }) {
             vec4 mv = viewMatrix * vec4(worldPos, 1.0);
             float dist = -mv.z;
             vAlpha = edge * (1.0 - smoothstep(10.0, 46.0, dist)) * (aEnd > 0.5 ? 1.0 : 0.25);
+            // Not inside the cockpit (the canopy keeps the rain out)
+            vAlpha *= mix(1.0, smoothstep(2.6, 4.5, length(worldPos - cameraPosition)), uRide);
             gl_Position = projectionMatrix * mv;
           }
         `
@@ -762,7 +873,7 @@ function Rain({ active, tier }: { active: boolean; tier: SceneProps["tier"] }) {
 
 const BEAM_HEIGHT = 240;
 
-function Searchlights({ active }: { active: boolean }) {
+function Searchlights({ active, ride }: { active: boolean; ride: RefObject<CityRide> }) {
   const groupRef = useRef<Group>(null);
   const activeRef = useActiveRef(active);
 
@@ -787,10 +898,10 @@ function Searchlights({ active }: { active: boolean }) {
 
   const beams = useMemo(
     () => [
-      { x: -44, y: 48, z: -150, color: 0, speed: 0.22, phase: 0 },
-      { x: 52, y: 56, z: -210, color: 1, speed: -0.17, phase: 2 },
-      { x: -11, y: 262, z: LANDMARK_Z - 11, color: 1, speed: 0.13, phase: 4 },
-      { x: 11, y: 262, z: LANDMARK_Z + 11, color: 0, speed: -0.1, phase: 1 },
+      { x: -44, y: 48, z: -150, color: 0, speed: 0.22, phase: 0, flows: true },
+      { x: 52, y: 56, z: -210, color: 1, speed: -0.17, phase: 2, flows: true },
+      { x: -11, y: 262, z: LANDMARK_Z - 11, color: 1, speed: 0.13, phase: 4, flows: false },
+      { x: 11, y: 262, z: LANDMARK_Z + 11, color: 0, speed: -0.1, phase: 1, flows: false },
     ],
     [],
   );
@@ -803,6 +914,10 @@ function Searchlights({ active }: { active: boolean }) {
       const beam = beams[i];
       child.rotation.z = Math.sin(t * beam.speed + beam.phase) * 0.5;
       child.rotation.x = Math.cos(t * beam.speed * 0.8 + beam.phase) * 0.25 - 0.1;
+      // The two on the avenue's rooftops flow with the city while riding (the tower's stay)
+      const flow = cityFlow(beam.flows ? beam.z : STATIC_ANCHOR, ride.current.travel, ride.current.riding);
+      child.position.z = beam.z + flow.shift;
+      child.position.y = beam.y - (1 - flow.rise) * (beam.y + 4);
     });
   });
 
@@ -894,20 +1009,26 @@ function LandmarkRings({ active }: { active: boolean }) {
 /* Street                                                              */
 /* ------------------------------------------------------------------ */
 
-function StreetMarkings() {
+function StreetMarkings({ ride }: { ride: RefObject<CityRide> }) {
+  const materialRef = useRef<ShaderMaterial>(null);
   const uniforms = useMemo(
     () => ({
       uColA: { value: new Color(P.a) },
       uColB: { value: new Color(P.b) },
       uFogColor: { value: new Color(P.fog) },
       uFogDensity: { value: THEME.fogDensity },
+      uTravel: { value: 0 },
     }),
     [],
   );
+  useFrame(() => {
+    if (materialRef.current) materialRef.current.uniforms.uTravel.value = ride.current.riding ? ride.current.travel : 0;
+  });
   return (
     <mesh rotation-x={-Math.PI / 2} position={[0, 0.03, -200]} frustumCulled={false}>
       <planeGeometry args={[60, 900]} />
       <shaderMaterial
+        ref={materialRef}
         uniforms={uniforms}
         transparent
         depthWrite={false}
@@ -926,6 +1047,7 @@ function StreetMarkings() {
           /* glsl */ `
           uniform vec3 uColA;
           uniform vec3 uColB;
+          uniform float uTravel;
           varying vec3 vWorld;
           ${fogGLSL}
           float lineX(float x, float center, float width) {
@@ -938,7 +1060,7 @@ function StreetMarkings() {
             // Neon curbs on both sides of the avenue
             float curb = lineX(x, -9.0, 0.08) + lineX(x, 9.0, 0.08);
             // Dashed lane lines
-            float dash = step(0.45, fract(z / 7.0));
+            float dash = step(0.45, fract((z - uTravel) / 7.0));
             float lanes = (lineX(x, -3.0, 0.06) + lineX(x, 3.0, 0.06)) * dash;
             // Double center line
             float center = lineX(x, -0.25, 0.05) + lineX(x, 0.25, 0.05);
@@ -955,7 +1077,7 @@ function StreetMarkings() {
   );
 }
 
-function Street({ tier, active }: { tier: SceneProps["tier"]; active: boolean }) {
+function Street({ tier, active, ride }: { tier: SceneProps["tier"]; active: boolean; ride: RefObject<CityRide> }) {
   return (
     <>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0, -200]} frustumCulled={false}>
@@ -981,7 +1103,7 @@ function Street({ tier, active }: { tier: SceneProps["tier"]; active: boolean })
           <meshBasicMaterial color="#05060f" />
         )}
       </mesh>
-      <StreetMarkings />
+      <StreetMarkings ride={ride} />
     </>
   );
 }
@@ -990,9 +1112,46 @@ function Street({ tier, active }: { tier: SceneProps["tier"]; active: boolean })
 /* Scene                                                               */
 /* ------------------------------------------------------------------ */
 
+/** Cruising speed of the sky taxi, units (meters) per second. */
+const CRUISE = 30;
+/** World units per second to km/h on the dashboard. */
+const KMH = 3.6;
+
+/**
+ * The ride over the avenue: while you are in the sky taxi the city flows past
+ * at cruising speed (see ./city/flow.ts); on the page everything stays put.
+ */
+function useCityRide(active: boolean) {
+  const ride = useRef<CityRide>({ riding: false, travel: 0, speed: CRUISE });
+  const activeRef = useActiveRef(active);
+  useFrame((_, delta) => {
+    const r = ride.current;
+    r.riding = activeRef.current && ridingIn("ship");
+    if (!r.riding) {
+      r.travel = 0;
+      r.speed = CRUISE;
+      return;
+    }
+    const dt = Math.min(delta, 0.1);
+    const target = world.reducedMotion ? 10 : CRUISE;
+    r.speed += (target - r.speed) * (1 - Math.exp(-dt * 0.8));
+    r.travel += r.speed * dt;
+    drive.speed = r.speed * KMH;
+  });
+  return ride;
+}
+
 export default function CityScene({ active, tier }: SceneProps) {
   const buildings = useMemo(() => generateCity(tier), [tier]);
   const signs = useMemo(() => generateSigns(buildings, tier), [buildings, tier]);
+  const boardSpot = useMemo(() => taxiBoardSpot(buildings), [buildings]);
+  const ride = useCityRide(active);
+  // The ship is only built once someone hails the sky taxi
+  const { shipVisited } = useSyncExternalStore(
+    driveStore.subscribe,
+    driveStore.getSnapshot,
+    driveStore.getServerSnapshot,
+  );
 
   return (
     <group visible={active}>
@@ -1004,13 +1163,16 @@ export default function CityScene({ active, tier }: SceneProps) {
         glowHeight={0.12}
       />
       <ambientLight intensity={1} />
-      <Buildings data={buildings} active={active} />
-      <Signs data={signs} active={active} />
-      <Traffic active={active} tier={tier} />
-      <Rain active={active} tier={tier} />
-      <Searchlights active={active} />
+      <Buildings data={buildings} active={active} ride={ride} />
+      <Signs data={signs} active={active} ride={ride} />
+      <Traffic active={active} tier={tier} ride={ride} />
+      <Rain active={active} tier={tier} ride={ride} />
+      <Searchlights active={active} ride={ride} />
       <LandmarkRings active={active} />
-      <Street tier={tier} active={active} />
+      <Street tier={tier} active={active} ride={ride} />
+      <TaxiBoard active={active} ride={ride} spot={boardSpot} />
+      {shipVisited && <ShipTraffic tier={tier} ride={ride} />}
+      {shipVisited && <ShipInterior tier={tier} ride={ride} lights={signs} />}
     </group>
   );
 }

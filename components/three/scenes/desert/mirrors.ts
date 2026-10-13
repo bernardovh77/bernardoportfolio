@@ -2,7 +2,7 @@ import { BufferAttribute, BufferGeometry, Color, Matrix4, Quaternion, ShaderMate
 import { CAR_POSITION, EYE } from "@/lib/car/cabin";
 import { THEMES } from "@/lib/themes";
 import { fogGLSL, hashGLSL, outputGLSL } from "../../glsl";
-import { type PartBuilder, KIND } from "./builder";
+import { type PartBuilder, KIND } from "../../vehicle/builder";
 import { LANE_LINE, trafficGLSL } from "./traffic";
 
 /**

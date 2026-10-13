@@ -1,6 +1,6 @@
 import { BufferAttribute, BufferGeometry, Vector3 } from "three";
 import { createRandom } from "@/lib/random";
-import { PartBuilder } from "./builder";
+import { PartBuilder } from "../../vehicle/builder";
 
 /**
  * Traffic on the desert highway, shared by the light trails seen from the page,

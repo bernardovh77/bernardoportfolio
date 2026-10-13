@@ -2,8 +2,19 @@
 
 import { type CSSProperties, type PointerEvent, useEffect, useSyncExternalStore } from "react";
 import { carOSStore, getCarOS } from "@/lib/car/os";
-import { drive, driveStore, forceLeaveCar, leaveCar, setView, toggleView, TRANSPORT_MS } from "@/lib/drive";
+import {
+  drive,
+  driveStore,
+  forceLeaveRide,
+  leaveRide,
+  pickScreen,
+  setView,
+  toggleView,
+  TRANSPORT_MS,
+  VEHICLE_DISTRICT,
+} from "@/lib/drive";
 import { useMediaQuery } from "@/lib/hooks";
+import { THEMES } from "@/lib/themes";
 import { useExperience } from "@/components/experience/ExperienceProvider";
 
 type PadButton = "up" | "down" | "left" | "right" | "a" | "b" | "fire" | "use" | "enter" | "escape";
@@ -12,7 +23,7 @@ type PadButton = "up" | "down" | "left" | "right" | "a" | "b" | "fire" | "use" |
 function onScreen(event: PointerEvent<HTMLElement>) {
   const x = (event.clientX / window.innerWidth) * 2 - 1;
   const y = -(event.clientY / window.innerHeight) * 2 + 1;
-  return drive.pick?.(x, y) ?? null;
+  return pickScreen(x, y);
 }
 
 function blurAfterClick(event: { currentTarget: HTMLElement }) {
@@ -21,13 +32,13 @@ function blurAfterClick(event: { currentTarget: HTMLElement }) {
 }
 
 /**
- * Everything on top of the 3D view while riding in the car:
+ * Everything on top of the 3D view while riding (the desert car or the sky taxi):
  * the transport effect, the buttons to leave or look around,
  * the control hints, a touch pad on phones, and the keyboard routing.
  */
 export function DriveOverlay() {
   const { t, lang, theme } = useExperience();
-  const { phase, view } = useSyncExternalStore(
+  const { phase, view, vehicle } = useSyncExternalStore(
     driveStore.subscribe,
     driveStore.getSnapshot,
     driveStore.getServerSnapshot,
@@ -35,10 +46,11 @@ export function DriveOverlay() {
   const os = useSyncExternalStore(carOSStore.subscribe, carOSStore.getSnapshot, carOSStore.getServerSnapshot);
   const touch = useMediaQuery("(pointer: coarse)");
   const active = phase !== "off";
+  const vocab = t.drive.vehicles[vehicle];
 
-  // Only the Synth Desert has the highway
+  // Each ride belongs to its district: travelling elsewhere drops you out
   useEffect(() => {
-    if (theme !== "desert") forceLeaveCar();
+    if (drive.phase !== "off" && theme !== VEHICLE_DISTRICT[drive.vehicle]) forceLeaveRide();
   }, [theme]);
 
   useEffect(() => {
@@ -66,7 +78,7 @@ export function DriveOverlay() {
           return;
         }
         if (event.code === "Escape" && carOS.mode !== "game") {
-          leaveCar();
+          leaveRide();
           event.preventDefault();
           event.stopPropagation();
           return;
@@ -104,7 +116,10 @@ export function DriveOverlay() {
         : os.mode === "menu"
           ? "menu"
           : "boot";
-  const hints = view === "screen" || hintKey === "doom" ? t.drive.hints[hintKey] : [];
+  // The view and menu hints depend on the vehicle
+  const base = t.drive.hints[hintKey] ?? [];
+  const extra: [string, string][] = hintKey === "menu" ? [["V", vocab.view]] : hintKey === "doom" ? [["`", vocab.menu]] : [];
+  const hints = view === "screen" || hintKey === "doom" ? [...base, ...extra] : [];
 
   const onPointer = (kind: "down" | "move" | "up") => (event: PointerEvent<HTMLDivElement>) => {
     if (drive.phase !== "inside") return;
@@ -159,7 +174,7 @@ export function DriveOverlay() {
           <div className="drive__bar">
             <p className="drive__badge">
               <span className="drive__dot" aria-hidden="true" />
-              NV-77 · {t.drive.autopilot}
+              {vocab.name} · {t.drive.autopilot}
             </p>
             <div className="drive__actions">
               {os.mode === "doom" && (
@@ -171,7 +186,7 @@ export function DriveOverlay() {
                     blurAfterClick(event);
                   }}
                 >
-                  {t.drive.carMenu} <kbd>`</kbd>
+                  {vocab.menu} <kbd>`</kbd>
                 </button>
               )}
               <button
@@ -182,7 +197,7 @@ export function DriveOverlay() {
                   blurAfterClick(event);
                 }}
               >
-                {view === "screen" ? t.drive.lookRoad : t.drive.lookScreen}
+                {view === "screen" ? vocab.lookOut : t.drive.lookScreen}
                 {os.mode !== "doom" && <kbd>V</kbd>}
               </button>
               <button
@@ -190,10 +205,10 @@ export function DriveOverlay() {
                 className="drive__button drive__button--leave"
                 onClick={(event) => {
                   blurAfterClick(event);
-                  leaveCar();
+                  leaveRide();
                 }}
               >
-                {t.drive.leave}
+                {vocab.leave}
                 {os.mode !== "doom" && os.mode !== "game" && <kbd>Esc</kbd>}
               </button>
             </div>
@@ -268,7 +283,7 @@ export function DriveOverlay() {
           </div>
           <div className="drive-fx__center">
             <p className="drive-fx__label">{phase === "entering" ? t.drive.linking : t.drive.unlinking}</p>
-            <p className="drive-fx__name">{phase === "entering" ? "NV-77" : "D-02"}</p>
+            <p className="drive-fx__name">{phase === "entering" ? vocab.name : THEMES[theme].code}</p>
             <div className="drive-fx__bar" aria-hidden="true">
               <span />
             </div>

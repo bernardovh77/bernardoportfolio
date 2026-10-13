@@ -14,7 +14,7 @@ import {
   STEERING_CENTER,
   STEERING_RADIUS,
 } from "@/lib/car/cabin";
-import { KIND, PartBuilder } from "./builder";
+import { KIND, PartBuilder } from "../../vehicle/builder";
 import { addMirrorHousings } from "./mirrors";
 
 /**
@@ -114,12 +114,16 @@ export function buildCabin() {
 
   /* ------------------------ Steering wheel ------------------------ */
   const axis = STEERING_AXIS;
-  b.paint(LEATHER, KIND.gloss).ring(STEERING_CENTER, axis, STEERING_RADIUS, 0.017, 40, 8);
-  // Neon marker at 12 o'clock
+  // Rim and stripe share the same cross-section, so the stripe sits evenly on the leather
+  const RIM_SIDES = 12;
+  b.paint(LEATHER, KIND.gloss).ring(STEERING_CENTER, axis, STEERING_RADIUS, 0.017, 64, RIM_SIDES);
   {
+    // Center stripe at 12 o'clock: a neon band wrapped around the rim, with a hot core line
+    const top = Math.PI / 2;
+    b.paint(PINK, KIND.neon, 2).ring(STEERING_CENTER, axis, STEERING_RADIUS, 0.0176, 8, RIM_SIDES, top - 0.07, top + 0.07);
+    b.paint("#ffd0e4", KIND.neon, 2).ring(STEERING_CENTER, axis, STEERING_RADIUS, 0.0179, 2, RIM_SIDES, top - 0.014, top + 0.014);
     const u = new Vector3(1, 0, 0).addScaledVector(axis, -axis.x).normalize();
     const w = new Vector3().crossVectors(axis, u).normalize();
-    b.paint(PINK, KIND.neon, 2.6).ring(STEERING_CENTER, axis, STEERING_RADIUS, 0.0185, 6, 6, Math.PI / 2 - 0.09, Math.PI / 2 + 0.09);
     // Spokes: left, right and bottom
     b.paint(TRIM, KIND.gloss);
     for (const angle of [Math.PI, 0, -Math.PI / 2]) {

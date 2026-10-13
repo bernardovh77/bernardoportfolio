@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { drive, enterCar } from "@/lib/drive";
-import { exitSign } from "@/lib/exitSign";
+import { drive, enterRide, vehicleIn } from "@/lib/drive";
+import { rideSigns } from "@/lib/rideSign";
 import { useExperience } from "@/components/experience/ExperienceProvider";
 
-/** Things on the page that keep their own clicks (the road sign is only behind empty space or text). */
+/** Things on the page that keep their own clicks (the sign is only behind empty space or text). */
 const OWN_CLICKS =
   "a, button, input, textarea, select, label, [role='button'], [data-cursor], .terminal, .topbar, .dock, .music, .drive";
 
@@ -23,39 +23,40 @@ function toNdc(event: MouseEvent) {
 }
 
 /**
- * The page side of the EXIT 77 road sign (the sign itself is in the 3D desert):
- * it tells the sign where the pointer is, shows a small label while you point
- * at it, and puts you in the car when you click it.
+ * The page side of the signs that offer a ride (the signs themselves are in 3D):
+ * EXIT 77 in the Synth Desert and the SKY TAXI board in the Megacity.
+ * It tells the district's sign where the pointer is, shows a small label while
+ * you point at it, and puts you in the vehicle when you click it.
  */
 export function HitchSign() {
   const { t, theme, traveling } = useExperience();
   const tipRef = useRef<HTMLDivElement>(null);
-  const desert = theme === "desert";
+  const vehicle = vehicleIn(theme);
 
   useEffect(() => {
-    if (!desert || traveling) return;
+    if (!vehicle || traveling) return;
+    const sign = rideSigns[vehicle];
     const root = document.documentElement;
     const tip = tipRef.current;
 
     const onMove = (event: PointerEvent) => {
-      exitSign.pointerFree =
-        event.pointerType === "mouse" && !blocked(event.target) && drive.phase === "off" && nearTop();
+      sign.pointerFree = event.pointerType === "mouse" && !blocked(event.target) && drive.phase === "off" && nearTop();
       if (tip) tip.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0)`;
     };
     const onLeave = () => {
-      exitSign.pointerFree = false;
+      sign.pointerFree = false;
     };
     const onScroll = () => {
-      if (!nearTop()) exitSign.pointerFree = false;
+      if (!nearTop()) sign.pointerFree = false;
     };
     const onClick = (event: MouseEvent) => {
       if (drive.phase !== "off" || blocked(event.target) || !nearTop()) return;
       // Selecting text over the sign is not a click on it
       if (window.getSelection()?.toString()) return;
       const [x, y] = toNdc(event);
-      if (exitSign.pick?.(x, y)) enterCar();
+      if (sign.pick?.(x, y)) enterRide(vehicle);
     };
-    exitSign.onHover = (hover) => {
+    sign.onHover = (hover) => {
       root.classList.toggle("is-sign-hover", hover);
       tip?.toggleAttribute("data-show", hover);
     };
@@ -69,18 +70,18 @@ export function HitchSign() {
       window.removeEventListener("scroll", onScroll);
       document.removeEventListener("pointerleave", onLeave);
       window.removeEventListener("click", onClick);
-      exitSign.onHover = null;
-      exitSign.pointerFree = false;
-      exitSign.hover = false;
+      sign.onHover = null;
+      sign.pointerFree = false;
+      sign.hover = false;
       root.classList.remove("is-sign-hover");
       tip?.removeAttribute("data-show");
     };
-  }, [desert, traveling]);
+  }, [vehicle, traveling]);
 
-  if (!desert) return null;
+  if (!vehicle) return null;
   return (
     <div ref={tipRef} className="sign-tip" aria-hidden="true">
-      <span>{t.drive.signTip}</span>
+      <span>{t.drive.vehicles[vehicle].signTip}</span>
     </div>
   );
 }

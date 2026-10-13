@@ -16,12 +16,12 @@ import {
   Vector3,
 } from "three";
 import { drive } from "@/lib/drive";
-import { exitSign } from "@/lib/exitSign";
+import { rideSigns } from "@/lib/rideSign";
 import { THEMES } from "@/lib/themes";
 import { world } from "@/lib/world";
 import { fogGLSL, outputGLSL } from "../../glsl";
 import { cssFontFamily, makeTexture, useActiveRef } from "../../shared";
-import { KIND, PartBuilder } from "./builder";
+import { KIND, PartBuilder } from "../../vehicle/builder";
 
 /**
  * EXIT 77: a highway sign on the right shoulder that keeps coming by with the traffic.
@@ -29,6 +29,8 @@ import { KIND, PartBuilder } from "./builder";
  */
 
 const P = THEMES.desert.palette;
+/** The page side of this sign (hover label, click) */
+const exitSign = rideSigns.car;
 /** Right shoulder, just outside the neon gates */
 const SIGN_X = 10.7;
 /** One sign every this many units of road (about every 17 s from the page) */

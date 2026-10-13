@@ -2,7 +2,7 @@
 
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { links, music, profile } from "@/lib/content";
-import { enterCar } from "@/lib/drive";
+import { enterRide, vehicleIn } from "@/lib/drive";
 import { musicStore } from "@/lib/music";
 import { isLang, localize, ui } from "@/lib/i18n";
 import { scrollToTarget } from "@/lib/scroll";
@@ -130,18 +130,23 @@ export function Terminal() {
       case "hire":
         print([echo, out(t.terminal.hire)]);
         break;
-      // Not in `help`: a secret way into the cars on the desert highway
+      // Not in `help`: a secret way into the desert's cars and the Megacity's sky taxis
       case "drive":
       case "ride":
       case "hitchhike":
       case "carona":
-        if (theme === "desert") {
-          print([echo, out(t.drive.terminalGo)]);
-          enterCar();
+      case "fly":
+      case "voar":
+      case "taxi": {
+        const vehicle = vehicleIn(theme);
+        if (vehicle) {
+          print([echo, out(t.drive.vehicles[vehicle].terminalGo)]);
+          enterRide(vehicle);
         } else {
           print([echo, err(t.drive.terminalNoRoad)]);
         }
         break;
+      }
       default:
         print([echo, err(t.terminal.notFound(command))]);
     }

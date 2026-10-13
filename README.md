@@ -45,9 +45,11 @@ Interface text (menu labels, buttons, the terminal) is in `lib/i18n.ts`.
 
 Press `1` to `4` to travel between districts. The terminal in the Contact section accepts commands too; type `help`.
 
-## The secret ride
+## The secret rides
 
 In the Synth Desert, an **EXIT 77** sign keeps coming by on the side of the highway. Click it (or type `drive` in the terminal) and you are inside one of the cars, cruising in the left lane with the traffic. You take in the cockpit and the road for a few seconds, then the driver turns to the console screen, which runs NV-77 OS: Night Racer, Neon Snake, Synth Breaker, a radio button for the music, and the original DOOM. The mirrors show the road behind you, the gates you passed and the lights of the cars following.
+
+In the Megacity, a **SKY TAXI** board hangs off a tower on the right of the avenue, bulbs chasing around its edge. Click it (or type `taxi` or `fly`) and you are in the pilot's seat of a small ship, in the spirit of No Man's Sky: a bubble canopy, a holographic head-up display, radar and systems displays, a flight stick. You fly between the towers in a lane of sky traffic, at the same height and speed as the ships around you, while the city flows past. The console screen is the same NV-77 OS, DOOM included.
 
 DOOM is id Software's Linux DOOM 1.10 source (GPL-2.0), compiled to WebAssembly by Cornelius Diekmann, with the free shareware Episode 1 built in. It only downloads when someone picks it. Credits and source links are in `public/games/doom/README.txt`.
 
