@@ -27,6 +27,7 @@ export function Cursor() {
     let ry = y;
     let visible = false;
     let frame = 0;
+    let overInteractive = false;
 
     const onMove = (event: PointerEvent) => {
       if (event.pointerType !== "mouse") return;
@@ -39,7 +40,7 @@ export function Cursor() {
         root.classList.add("cursor-visible");
       }
       const target = event.target instanceof Element ? event.target.closest(INTERACTIVE) : null;
-      ring.classList.toggle("is-locked", Boolean(target));
+      overInteractive = Boolean(target);
       const text = target?.matches("input, textarea") ?? false;
       ring.classList.toggle("is-text", text);
       dot.classList.toggle("is-text", text);
@@ -56,6 +57,8 @@ export function Cursor() {
       ry += (y - ry) * 0.2;
       dot.style.transform = `translate3d(${x}px, ${y}px, 0)`;
       ring.style.transform = `translate3d(${rx}px, ${ry}px, 0)`;
+      // Also lock onto the road sign in the 3D desert (it moves under a still pointer)
+      ring.classList.toggle("is-locked", overInteractive || root.classList.contains("is-sign-hover"));
       frame = requestAnimationFrame(loop);
     };
     frame = requestAnimationFrame(loop);

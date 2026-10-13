@@ -12,6 +12,7 @@ import {
   EdgesGeometry,
   type Group,
   InstancedBufferAttribute,
+  type InstancedMesh,
   OctahedronGeometry,
   PlaneGeometry,
   type ShaderMaterial,
@@ -26,6 +27,9 @@ import { world } from "@/lib/world";
 import { fogGLSL, outputGLSL, simplexGLSL } from "../glsl";
 import { SkyDome, Starfield, type SceneProps, useActiveRef } from "../shared";
 import { CarInterior } from "./desert/CarInterior";
+import { ExitSign } from "./desert/ExitSign";
+import { TrafficCars } from "./desert/TrafficCars";
+import { LANE_LINE, trafficData, trafficGLSL } from "./desert/traffic";
 
 const THEME = THEMES.desert;
 const P = THEME.palette;
@@ -178,7 +182,7 @@ function Terrain({
             float road = 1.0 - smoothstep(7.0, 7.6, ax);
             float fx = fwidth(vWorld.x) * 1.5;
             float edge = 1.0 - smoothstep(0.1, 0.1 + fx, abs(ax - 6.7));
-            float lane = (1.0 - smoothstep(0.06, 0.06 + fx, abs(ax - 2.3))) * step(0.5, fract(vScrollZ / 9.0));
+            float lane = (1.0 - smoothstep(0.06, 0.06 + fx, abs(ax - ${LANE_LINE.toFixed(2)}))) * step(0.5, fract(vScrollZ / 9.0));
             float center = (1.0 - smoothstep(0.08, 0.08 + fx, abs(vWorld.x))) * step(0.45, fract(vScrollZ / 5.0));
             vec3 roadCol = vec3(0.01, 0.006, 0.016) + uColB * edge * 3.2 + vec3(1.0, 0.85, 0.75) * lane * 0.7 + uColA * center * 1.8;
             col = mix(col, roadCol, road);
@@ -398,37 +402,23 @@ function HighwayTraffic({
   tier: SceneProps["tier"];
   travel: RefObject<number>;
 }) {
-  const materialRef = useRef<ShaderMaterial>(null);
+  const meshRef = useRef<InstancedMesh>(null);
   const activeRef = useActiveRef(active);
   const perLane = tier === "high" ? 14 : 8;
 
   const { geometry, count } = useMemo(() => {
-    const rnd = createRandom(31);
-    // x, speed (relative), direction (1 = same way as us), phase offset
-    const lanes: [number, number, number][] = [
-      [-4.6, 70, -1],
-      [-2.1, 58, -1],
-      [2.1, 14, 1],
-      [4.6, 22, 1],
-    ];
-    const total = lanes.length * perLane;
-    const data = new Float32Array(total * 4);
-    let k = 0;
-    for (const lane of lanes) {
-      for (let j = 0; j < perLane; j++) {
-        data.set([lane[0], lane[1], lane[2], (j / perLane) * 600 + rnd.range(0, 30)], k * 4);
-        k++;
-      }
-    }
+    const data = trafficData(perLane);
     const g = new BoxGeometry(1, 1, 1);
     g.setAttribute("aCar", new InstancedBufferAttribute(data, 4));
-    return { geometry: g, count: total };
+    return { geometry: g, count: data.length / 4 };
   }, [perLane]);
 
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
       uTravel: { value: 0 },
+      uDrive: { value: 0 },
+      uCarZ: { value: CAR_POSITION.z },
       uTail: { value: new Color("#ff2340") },
       uHead: { value: new Color("#fff1d6") },
       uFogColor: { value: new Color(P.fog) },
@@ -440,39 +430,37 @@ function HighwayTraffic({
   useLayoutEffect(() => () => geometry.dispose(), [geometry]);
 
   useFrame((state) => {
-    const m = materialRef.current;
-    if (!activeRef.current || !m) return;
+    const mesh = meshRef.current;
+    if (!activeRef.current || !mesh) return;
+    // In the car, real cars take over (TrafficCars)
+    mesh.visible = !drive.inside;
+    const m = mesh.material as ShaderMaterial;
     m.uniforms.uTime.value = state.clock.elapsedTime;
     m.uniforms.uTravel.value = travel.current;
   });
 
   return (
-    <instancedMesh args={[geometry, undefined, count]} frustumCulled={false}>
+    <instancedMesh ref={meshRef} args={[geometry, undefined, count]} frustumCulled={false}>
       <shaderMaterial
-        ref={materialRef}
         uniforms={uniforms}
         transparent
         depthWrite={false}
         blending={AdditiveBlending}
         vertexShader={
           /* glsl */ `
-          uniform float uTime;
-          uniform float uTravel;
+          ${trafficGLSL}
           attribute vec4 aCar;
           varying float vAlong;
           varying float vDir;
           varying float vDist;
           varying float vEdge;
           void main() {
-            float span = 600.0;
-            float moved = aCar.z > 0.0 ? uTravel * 0.25 + uTime * aCar.y * 0.2 : uTravel + uTime * aCar.y;
-            float offset = mod(aCar.w + moved * (aCar.z > 0.0 ? -1.0 : 1.0), span);
-            float z = -540.0 + offset;
+            vec2 place = trafficPlace(aCar);
             vec3 p = position * vec3(0.5, 0.16, 4.0);
-            vec3 worldPos = vec3(aCar.x, 0.55, z) + p;
+            vec3 worldPos = vec3(aCar.x, 0.55, place.x) + p;
             vAlong = position.z + 0.5;
             vDir = aCar.z;
-            vEdge = smoothstep(0.0, 60.0, offset) * (1.0 - smoothstep(span - 40.0, span, offset));
+            vEdge = place.y;
             vec4 mv = viewMatrix * vec4(worldPos, 1.0);
             vDist = -mv.z;
             gl_Position = projectionMatrix * mv;
@@ -686,7 +674,9 @@ export default function DesertScene({ active, tier }: SceneProps) {
       <Gates active={active} travel={travel} />
       <HighwayTraffic active={active} tier={tier} travel={travel} />
       <Dust active={active} travel={travel} />
-      {visited && <CarInterior />}
+      <ExitSign active={active} travel={travel} />
+      {visited && <TrafficCars tier={tier} travel={travel} />}
+      {visited && <CarInterior tier={tier} travel={travel} />}
     </group>
   );
 }

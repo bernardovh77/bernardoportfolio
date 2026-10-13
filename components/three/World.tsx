@@ -19,7 +19,7 @@ import {
 } from "postprocessing";
 import { Euler, type PerspectiveCamera, Quaternion, Vector2, Vector3 } from "three";
 import { CAR_POSITION, cabinCamera, carMotion } from "@/lib/car/cabin";
-import { drive, viewAmount } from "@/lib/drive";
+import { drive, settleAmount, viewAmount } from "@/lib/drive";
 import { onScrollProgress } from "@/lib/scroll";
 import { THEMES, type ThemeId } from "@/lib/themes";
 import {
@@ -80,6 +80,7 @@ function CameraRig({ theme }: { theme: ThemeId }) {
       const m = carMotion(state.clock.elapsedTime, world.reducedMotion, r.motion);
       const fov = cabinCamera(
         viewAmount(now),
+        settleAmount(now),
         camera.aspect,
         r.headX,
         r.headY,

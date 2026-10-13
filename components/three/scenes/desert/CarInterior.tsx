@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import {
   AdditiveBlending,
@@ -27,6 +27,8 @@ import { drive, leaveCar } from "@/lib/drive";
 import { world } from "@/lib/world";
 import { outputGLSL } from "../../glsl";
 import { buildCabin, hudGeometry, screenGeometry, windshieldGeometry } from "./cabinGeometry";
+import { createMirrorMaterial, mirrorGlassGeometry } from "./mirrors";
+import { trafficData } from "./traffic";
 
 /**
  * The inside of the car you hitch a ride in: dashboard, wheel, pillars,
@@ -35,7 +37,7 @@ import { buildCabin, hudGeometry, screenGeometry, windshieldGeometry } from "./c
  */
 
 /** The screen lights up this long after landing in the seat (it boots while the head turns). */
-const POWER_ON_DELAY = 1.3;
+const POWER_ON_DELAY = 2.4;
 
 function createCabinMaterial() {
   return new ShaderMaterial({
@@ -45,8 +47,6 @@ function createCabinMaterial() {
       uSky: { value: new Color(2.6, 0.95, 1.7) },
       uScreenPos: { value: new Vector3() },
       uScreenGlow: { value: new Color(0, 0, 0) },
-      uHorizon: { value: new Color("#ff3f8e") },
-      uSkyTop: { value: new Color("#2a0b35") },
     },
     vertexShader: /* glsl */ `
       attribute vec3 aColor;
@@ -69,8 +69,6 @@ function createCabinMaterial() {
       uniform vec3 uSky;
       uniform vec3 uScreenPos;
       uniform vec3 uScreenGlow;
-      uniform vec3 uHorizon;
-      uniform vec3 uSkyTop;
       varying vec3 vColor;
       varying float vKind;
       varying vec3 vNormal;
@@ -98,18 +96,6 @@ function createCabinMaterial() {
             // Glossy trim: a rim of sky color at grazing angles
             float f = pow(1.0 - max(dot(n, V), 0.0), 4.0);
             col += uSky * f * 0.06;
-          } else if (kind == 3) {
-            // Mirror: the desert behind the car, as a gradient
-            vec3 r = reflect(-V, n);
-            float h = r.y;
-            vec3 sky = mix(uHorizon * 0.3, uSkyTop * 0.35, smoothstep(0.0, 0.07, h));
-            vec3 ground = vec3(0.025, 0.008, 0.035);
-            col = mix(ground, sky, smoothstep(-0.012, 0.004, h));
-            col += uHorizon * exp(-abs(h) * 110.0) * 0.7;
-            // Two headlights far behind
-            vec2 lights = vec2(abs(r.x) - 0.012, r.y + 0.006);
-            col += vec3(1.0, 0.92, 0.8) * exp(-dot(lights, lights) * 90000.0) * 2.0;
-            col *= 0.55 + vColor * 4.0;
           }
         }
         gl_FragColor = vec4(col, 1.0);
@@ -293,7 +279,7 @@ function hudFont(variable: string) {
 
 type CarParts = ReturnType<typeof createParts>;
 
-function createParts() {
+function createParts(tier: "high" | "low") {
   const os = getCarOS();
   const osTexture = new CanvasTexture(os.canvas);
   osTexture.colorSpace = SRGBColorSpace;
@@ -336,6 +322,8 @@ function createParts() {
     screenMaterial: createScreenMaterial(osTexture, doomTexture),
     hudMaterial: createHudMaterial(hudTexture),
     windshieldMaterial: createWindshieldMaterial(),
+    mirrors: mirrorGlassGeometry(),
+    mirrorMaterial: createMirrorMaterial(trafficData(tier === "high" ? 14 : 8)),
     /** Per-frame bookkeeping */
     hudIn: 0,
     power: 0,
@@ -346,12 +334,12 @@ function createParts() {
 
 // One car for the whole visit: built on the first ride, kept for the next ones
 let parts: CarParts | null = null;
-function carParts() {
-  if (!parts) parts = createParts();
+function carParts(tier: "high" | "low") {
+  if (!parts) parts = createParts(tier);
   return parts;
 }
 
-function updateCar(group: Group, time: number, delta: number) {
+function updateCar(group: Group, time: number, delta: number, travel: number) {
   const p = parts;
   if (!p) return;
   const os = p.os;
@@ -394,6 +382,11 @@ function updateCar(group: Group, time: number, delta: number) {
   else glow.setRGB(1.4, 0.9, 2.6).multiplyScalar(p.power);
   (p.cabinMaterial.uniforms.uScreenPos.value as Vector3).copy(SCREEN_CENTER).applyMatrix4(group.matrixWorld);
 
+  // Mirrors: the road behind moves with the same travel as the road ahead
+  const mirror = p.mirrorMaterial.uniforms;
+  mirror.uTravel.value = travel;
+  mirror.uTime.value = time;
+
   // Head-up display, a few times a second
   p.hudIn -= dt;
   if (p.hudIn <= 0 && p.hudContext) {
@@ -404,13 +397,13 @@ function updateCar(group: Group, time: number, delta: number) {
   p.hudMaterial.uniforms.uPower.value = Math.min(1, Math.max(0, (sinceArrival - 0.3) / 0.5));
 }
 
-export function CarInterior() {
+export function CarInterior({ tier, travel }: { tier: "high" | "low"; travel: RefObject<number> }) {
   const groupRef = useRef<Group>(null);
   const screenRef = useRef<Mesh>(null);
   const camera = useThree((state) => state.camera);
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
-  const p = carParts();
+  const p = carParts(tier);
 
   // Compile the car's shaders right away (during the transport effect),
   // not on the first frame inside the car
@@ -442,7 +435,7 @@ export function CarInterior() {
   }, [camera]);
 
   useFrame((state, delta) => {
-    if (groupRef.current) updateCar(groupRef.current, state.clock.elapsedTime, delta);
+    if (groupRef.current) updateCar(groupRef.current, state.clock.elapsedTime, delta, travel.current);
   });
 
   return (
@@ -450,6 +443,7 @@ export function CarInterior() {
       <mesh geometry={p.cabin} material={p.cabinMaterial} frustumCulled={false} />
       <mesh ref={screenRef} geometry={p.screen} material={p.screenMaterial} frustumCulled={false} />
       <mesh geometry={p.hud} material={p.hudMaterial} frustumCulled={false} renderOrder={3} />
+      <mesh geometry={p.mirrors} material={p.mirrorMaterial} frustumCulled={false} />
       <mesh geometry={p.windshield} material={p.windshieldMaterial} frustumCulled={false} renderOrder={2} />
     </group>
   );

@@ -8,8 +8,11 @@ import { Euler, Matrix4, Quaternion, Vector3 } from "three";
  * Shared by the 3D cabin and the camera so they always agree.
  */
 
-/** The car on the highway: right side, between the two lanes of light trails. */
-export const CAR_POSITION = new Vector3(3.35, 0, 14);
+/**
+ * The car on the highway: the left lane of the right-hand side (lanes are 3.35 wide,
+ * see components/three/scenes/desert/traffic.ts), where the camera of the desert sits.
+ */
+export const CAR_POSITION = new Vector3(1.7, 0, 14);
 
 /** Driver's eyes (left-hand drive, like in Brazil). */
 export const EYE = new Vector3(-0.36, 1.17, 0.32);
@@ -28,6 +31,8 @@ export const SCREEN_UP = new Vector3(0, 1, 0)
 export const SCREEN_RIGHT = new Vector3().crossVectors(SCREEN_UP, SCREEN_NORMAL).normalize();
 /** How far the eyes end up from the screen once the driver leans in. */
 const SCREEN_VIEW_DISTANCE = 0.46;
+/** The eyes aim this far above the screen's center, so some road shows over the dashboard. */
+const SCREEN_AIM_RAISE = 0.045;
 
 export const STEERING_CENTER = new Vector3(-0.38, 0.83, -0.05);
 export const STEERING_RADIUS = 0.175;
@@ -66,6 +71,7 @@ const _euler = new Euler(0, 0, 0, "YXZ");
 const _qRoad = new Quaternion();
 const _qScreen = new Quaternion();
 const _screenEye = new Vector3();
+const _screenAim = new Vector3();
 const _roadEye = new Vector3();
 const UP = new Vector3(0, 1, 0);
 
@@ -80,23 +86,29 @@ export function roadFov(aspect: number) {
   return Math.min(96, Math.max(66, 68 + (1 - aspect) * 52));
 }
 
-/** Field of view that frames the console screen: about two thirds of a wide window, almost all of a phone. */
+/**
+ * Field of view that frames the console screen. On wide windows it takes about half
+ * the width, so the dashboard, the wheel and the road stay in view around it;
+ * on a phone it takes almost all of it (the games need the room).
+ */
 export function screenFov(aspect: number) {
   const halfW = SCREEN_WIDTH / 2 / SCREEN_VIEW_DISTANCE;
   const halfH = SCREEN_HEIGHT / 2 / SCREEN_VIEW_DISTANCE;
-  const widthShare = aspect >= 1.2 ? 0.64 : aspect >= 0.9 ? 0.8 : 0.92;
-  const tanHalf = Math.max(halfW / widthShare / aspect, halfH / 0.74);
+  const widthShare = aspect >= 1.2 ? 0.5 : aspect >= 0.9 ? 0.7 : 0.92;
+  const tanHalf = Math.max(halfW / widthShare / aspect, (halfH + SCREEN_AIM_RAISE / SCREEN_VIEW_DISTANCE) / 0.82);
   return Math.min(92, Math.max(24, (2 * Math.atan(tanHalf) * 180) / Math.PI));
 }
 
 /**
  * Camera inside the car, in car space.
  * `amount` blends from the road view (0) to the screen view (1);
- * `lookX/lookY` (-1..1) turn the head a little toward the pointer.
+ * `settle` goes from 1 (just sat down: looking down at the wheel and the dashboard)
+ * to 0 (eyes on the road); `lookX/lookY` (-1..1) turn the head a little toward the pointer.
  * Returns the vertical field of view.
  */
 export function cabinCamera(
   amount: number,
+  settle: number,
   aspect: number,
   lookX: number,
   lookY: number,
@@ -110,20 +122,23 @@ export function cabinCamera(
   const lean = smooth(0.15, 1, amount);
   const zoom = smooth(0.3, 1, amount);
 
-  const free = 1 - amount;
+  const free = (1 - amount) * (1 - settle);
   const breathe = reduced ? 0 : Math.sin(time * 0.9) * 0.004;
   _roadEye.set(
     EYE.x + lookX * 0.03 * free,
-    EYE.y + breathe + lookY * 0.015 * free,
-    EYE.z,
+    EYE.y + breathe + lookY * 0.015 * free - settle * 0.02,
+    EYE.z + settle * 0.03,
   );
-  _euler.set(-0.05 + lookY * 0.16, -lookX * 0.32, 0, "YXZ");
+  // Settling in: a glance down at the wheel and across the dashboard, then up at the road
+  _euler.set(-0.05 + lookY * 0.16 * free - settle * 0.26, -lookX * 0.32 * free - settle * 0.1, 0, "YXZ");
   _qRoad.setFromEuler(_euler);
 
   _screenEye.copy(SCREEN_CENTER).addScaledVector(SCREEN_NORMAL, SCREEN_VIEW_DISTANCE);
   _screenEye.x += lookX * 0.006;
   _screenEye.y += lookY * 0.004 + breathe * 0.25;
-  _m.lookAt(_screenEye, SCREEN_CENTER, UP);
+  // Aim a little above the screen, so a strip of road still shows over the dashboard
+  _screenAim.copy(SCREEN_CENTER).addScaledVector(SCREEN_UP, SCREEN_AIM_RAISE);
+  _m.lookAt(_screenEye, _screenAim, UP);
   _qScreen.setFromRotationMatrix(_m);
 
   outPos.copy(_roadEye).lerp(_screenEye, lean);

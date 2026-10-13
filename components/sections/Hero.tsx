@@ -3,7 +3,6 @@
 import type { CSSProperties } from "react";
 import { profile } from "@/lib/content";
 import { createRandom } from "@/lib/random";
-import { HitchSign } from "@/components/drive/HitchSign";
 import { useExperience } from "@/components/experience/ExperienceProvider";
 import { ArrowDownIcon } from "@/components/ui/Icons";
 import { ScrambleText } from "@/components/ui/ScrambleText";
@@ -62,8 +61,6 @@ export function Hero() {
           </a>
         </div>
       </div>
-
-      <HitchSign />
 
       <a className="hero__scroll" href="#about">
         <ArrowDownIcon size={16} />

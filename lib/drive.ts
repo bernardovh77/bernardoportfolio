@@ -26,10 +26,14 @@ export type DriveView = "road" | "screen";
 export const TRANSPORT_MS = TRAVEL_DURATION;
 /** Fraction of the effect when the camera jumps (the overlay is opaque then). */
 export const SWAP_AT = 0.45;
-/** How long the driver looks at the road after landing in the seat. */
-export const ROAD_HOLD_MS = 1700;
-/** Turning the head between the road and the screen. */
-export const TURN_MS = 1500;
+/** Sitting down: a glance at the wheel and the dashboard, then eyes up on the road. */
+export const SETTLE_MS = 1900;
+/** How long the driver takes in the cockpit and the road before turning to the console. */
+export const ROAD_HOLD_MS = 3600;
+/** The first, unhurried turn toward the console... */
+export const FIRST_TURN_MS = 2300;
+/** ...and the quicker turns when the visitor switches views. */
+export const TURN_MS = 1300;
 
 export const drive = {
   phase: "off" as DrivePhase,
@@ -42,6 +46,8 @@ export const drive = {
   viewFrom: 0,
   /** performance.now() when the current turn started */
   viewStart: 0,
+  /** Length of the current turn, ms */
+  turnMs: TURN_MS,
   /** The visitor picked a view themselves, so the automatic turn is skipped */
   manualView: false,
   /** Speed shown on the dashboard, km/h (written by the scene) */
@@ -90,21 +96,32 @@ export const driveStore = {
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
+const easeSine = (t: number) => 0.5 - Math.cos(Math.PI * t) / 2;
+
 /** 0 = looking at the road, 1 = looking at the screen (eased, mid-turn values in between). */
 export function viewAmount(now: number) {
   const target = drive.view === "screen" ? 1 : 0;
-  const duration = world.reducedMotion ? 1 : TURN_MS;
+  const duration = world.reducedMotion ? 1 : drive.turnMs;
   const k = Math.min(1, Math.max(0, (now - drive.viewStart) / duration));
-  return drive.viewFrom + (target - drive.viewFrom) * ease(k);
+  const shape = drive.turnMs === FIRST_TURN_MS ? easeSine(k) : ease(k);
+  return drive.viewFrom + (target - drive.viewFrom) * shape;
 }
 
-export function setView(view: DriveView, manual = false) {
+/** 1 right after sitting down (eyes on the wheel and the dashboard), easing to 0 (eyes on the road). */
+export function settleAmount(now: number) {
+  if (world.reducedMotion || !drive.inside) return 0;
+  const k = Math.min(1, Math.max(0, (now - drive.arrivedAt) / SETTLE_MS));
+  return 1 - ease(k);
+}
+
+export function setView(view: DriveView, manual = false, duration = TURN_MS) {
   if (!drive.inside) return;
   if (manual) drive.manualView = true;
   if (view === drive.view) return;
   const now = performance.now();
   drive.viewFrom = viewAmount(now);
   drive.viewStart = now;
+  drive.turnMs = duration;
   drive.view = view;
   emit();
 }
@@ -161,7 +178,7 @@ export function enterCar() {
   later(swapAt, landInCar);
   later(reduced ? 300 : TRANSPORT_MS, () => setPhase("inside"));
   later(swapAt + ROAD_HOLD_MS, () => {
-    if (drive.inside && !drive.manualView) setView("screen");
+    if (drive.inside && !drive.manualView) setView("screen", false, FIRST_TURN_MS);
   });
   return true;
 }

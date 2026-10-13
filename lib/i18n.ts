@@ -150,9 +150,7 @@ const en = {
     },
   },
   drive: {
-    sign: "Exit 77",
     signTip: "Hitch a ride",
-    signLabel: "Secret: hitch a ride in one of the cars on the highway",
     linking: "Linking to vehicle",
     unlinking: "Back to the site",
     autopilot: "Autopilot",
@@ -341,9 +339,7 @@ const pt: UiStrings = {
     },
   },
   drive: {
-    sign: "Saída 77",
     signTip: "Pegar carona",
-    signLabel: "Segredo: pegue carona em um dos carros da estrada",
     linking: "Conectando ao veículo",
     unlinking: "Voltando ao site",
     autopilot: "Piloto automático",

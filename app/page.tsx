@@ -1,4 +1,5 @@
 import { DriveOverlay } from "@/components/drive/DriveOverlay";
+import { HitchSign } from "@/components/drive/HitchSign";
 import { ExperienceProvider } from "@/components/experience/ExperienceProvider";
 import { SmoothScroll } from "@/components/experience/SmoothScroll";
 import { DistrictContent } from "@/components/sections/DistrictContent";
@@ -40,6 +41,7 @@ export default function Home() {
       <TravelDock />
       <TravelOverlay />
       <DriveOverlay />
+      <HitchSign />
       <div className="scanlines" aria-hidden="true" />
       <Cursor />
       <BootScreen />
