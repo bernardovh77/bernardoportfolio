@@ -3,7 +3,7 @@
 import { type RefObject, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Color, DoubleSide, type Group, type Mesh, ShaderMaterial, Vector3 } from "three";
-import { CAR_CABIN, CAR_POSITION, SCREEN_CENTER, type VehicleMotion } from "@/lib/car/cabin";
+import { CAR_CABIN, CAR_POSITION, EYE, SCREEN_CENTER, type VehicleMotion } from "@/lib/car/cabin";
 import { drive, ridingIn } from "@/lib/drive";
 import { world } from "@/lib/world";
 import { outputGLSL } from "../../glsl";
@@ -20,15 +20,30 @@ import {
   usePrecompile,
   useScreenPick,
 } from "../../vehicle/console";
+import {
+  buildPendant,
+  createHitMaterial,
+  createPhotoMaterial,
+  PENDANT_CENTER,
+  PENDANT_PHOTO,
+  photoGeometry,
+  useKeepsakePick,
+} from "../../vehicle/keepsake";
 import { buildCabin, hudGeometry, screenGeometry, windshieldGeometry } from "./cabinGeometry";
 import { createMirrorMaterial, mirrorGlassGeometry } from "./mirrors";
 import { trafficData } from "./traffic";
 
 /**
  * The inside of the car you hitch a ride in: dashboard, wheel, pillars,
- * and the console screen that runs NV-77 OS (and DOOM).
+ * the console screen that runs NV-77 OS (and DOOM), and a photo pendant
+ * hanging from the rear-view mirror.
  * Only built the first time someone gets in.
  */
+
+/** Where the pendant's cord is tied: under the rear-view mirror (see mirrors.ts). */
+const PENDANT_ANCHOR = new Vector3(0, 1.252, -0.217);
+/** The pendant turns its photo toward the driver. */
+const PENDANT_YAW = Math.atan2(EYE.x - PENDANT_ANCHOR.x, EYE.z - PENDANT_ANCHOR.z);
 
 function createWindshieldMaterial() {
   return new ShaderMaterial({
@@ -128,6 +143,11 @@ function createParts(tier: "high" | "low") {
     windshieldMaterial: createWindshieldMaterial(),
     mirrors: mirrorGlassGeometry(),
     mirrorMaterial: createMirrorMaterial(trafficData(tier === "high" ? 14 : 8)),
+    pendant: buildPendant(),
+    photo: photoGeometry(PENDANT_PHOTO),
+    photoMaterial: createPhotoMaterial(),
+    pendantHit: photoGeometry(0.095),
+    hitMaterial: createHitMaterial(),
     /** Per-frame bookkeeping */
     hudIn: 0,
     motion: { x: 0, y: 0, pitch: 0, yaw: 0, roll: 0 } as VehicleMotion,
@@ -143,7 +163,7 @@ function carParts(tier: "high" | "low") {
 
 const inCar = () => ridingIn("car");
 
-function updateCar(group: Group, time: number, delta: number, travel: number) {
+function updateCar(group: Group, pendant: Group | null, time: number, delta: number, travel: number) {
   const p = parts;
   if (!p) return;
   group.visible = inCar();
@@ -157,6 +177,15 @@ function updateCar(group: Group, time: number, delta: number, travel: number) {
   const m = CAR_CABIN.motion(time, world.reducedMotion, p.motion);
   group.position.set(CAR_POSITION.x + m.x, CAR_POSITION.y + m.y, CAR_POSITION.z);
   group.rotation.set(m.pitch, m.yaw, m.roll);
+  // The pendant swings a little with the road
+  if (pendant) {
+    const calm = world.reducedMotion ? 0 : 1;
+    pendant.rotation.set(
+      (Math.sin(time * 1.4 + 2) * 0.03 + Math.sin(time * 3.1) * 0.008 - m.pitch * 5) * calm,
+      PENDANT_YAW,
+      (Math.sin(time * 1.9) * 0.05 + Math.sin(time * 3.3 + 1) * 0.02 + m.roll * 5) * calm,
+    );
+  }
 
   // Boot the console while the driver turns toward it
   runConsole(dt, time);
@@ -183,14 +212,16 @@ function updateCar(group: Group, time: number, delta: number, travel: number) {
 export function CarInterior({ tier, travel }: { tier: "high" | "low"; travel: RefObject<number> }) {
   const groupRef = useRef<Group>(null);
   const screenRef = useRef<Mesh>(null);
+  const pendantRef = useRef<Group>(null);
   const p = carParts(tier);
   const screenMaterial = getConsole().screenMaterial;
 
   usePrecompile(groupRef, inCar);
   useScreenPick("car", screenRef);
+  useKeepsakePick("car", pendantRef);
 
   useFrame((state, delta) => {
-    if (groupRef.current) updateCar(groupRef.current, state.clock.elapsedTime, delta, travel.current);
+    if (groupRef.current) updateCar(groupRef.current, pendantRef.current, state.clock.elapsedTime, delta, travel.current);
   });
 
   return (
@@ -200,6 +231,11 @@ export function CarInterior({ tier, travel }: { tier: "high" | "low"; travel: Re
       <mesh geometry={p.hud} material={p.hudMaterial} frustumCulled={false} renderOrder={3} />
       <mesh geometry={p.mirrors} material={p.mirrorMaterial} frustumCulled={false} />
       <mesh geometry={p.windshield} material={p.windshieldMaterial} frustumCulled={false} renderOrder={2} />
+      <group ref={pendantRef} position={PENDANT_ANCHOR.toArray()} rotation={[0, PENDANT_YAW, 0, "YXZ"]}>
+        <mesh geometry={p.pendant} material={p.cabinMaterial} frustumCulled={false} />
+        <mesh geometry={p.photo} material={p.photoMaterial} position={[0, PENDANT_CENTER.y, 0.0036]} frustumCulled={false} />
+        <mesh geometry={p.pendantHit} material={p.hitMaterial} position={[0, PENDANT_CENTER.y + 0.006, 0.006]} />
+      </group>
     </group>
   );
 }

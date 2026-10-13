@@ -74,7 +74,26 @@ export const drive = {
    * each vehicle's console screen, in screen pixels. Registered by the 3D cabins.
    */
   picks: {} as Partial<Record<Vehicle, ScreenPick>>,
+  /**
+   * Does a pointer (normalized device coordinates) land on the vehicle's little photo
+   * (the pendant on the car's mirror, the frame on the ship's dash)? Registered by the 3D cabins.
+   */
+  keepsakes: {} as Partial<Record<Vehicle, (ndcX: number, ndcY: number) => boolean>>,
+  /** The photo is open, zoomed in over everything */
+  photo: false,
 };
+
+/** Is the pointer on the little photo in the vehicle you are in? */
+export function pickKeepsake(ndcX: number, ndcY: number) {
+  return drive.inside && (drive.keepsakes[drive.vehicle]?.(ndcX, ndcY) ?? false);
+}
+
+/** Zooms into the photo (or closes it). */
+export function showPhoto(open: boolean) {
+  if (open && !drive.inside) return;
+  drive.photo = open;
+  emit();
+}
 
 /** Sitting in this vehicle right now (the camera is in its seat). */
 export function ridingIn(vehicle: Vehicle) {
@@ -90,13 +109,22 @@ type Snapshot = {
   phase: DrivePhase;
   view: DriveView;
   vehicle: Vehicle;
+  /** The photo is zoomed in */
+  photo: boolean;
   /** Someone rode in the car at least once (its 3D cabin is only built then) */
   carVisited: boolean;
   /** Same for the ship */
   shipVisited: boolean;
 };
 
-const SERVER_SNAPSHOT: Snapshot = { phase: "off", view: "road", vehicle: "car", carVisited: false, shipVisited: false };
+const SERVER_SNAPSHOT: Snapshot = {
+  phase: "off",
+  view: "road",
+  vehicle: "car",
+  photo: false,
+  carVisited: false,
+  shipVisited: false,
+};
 let snapshot: Snapshot = SERVER_SNAPSHOT;
 const visited: Record<Vehicle, boolean> = { car: false, ship: false };
 const listeners = new Set<() => void>();
@@ -107,6 +135,7 @@ function emit() {
     phase: drive.phase,
     view: drive.view,
     vehicle: drive.vehicle,
+    photo: drive.photo,
     carVisited: visited.car,
     shipVisited: visited.ship,
   };
@@ -114,6 +143,7 @@ function emit() {
     next.phase === snapshot.phase &&
     next.view === snapshot.view &&
     next.vehicle === snapshot.vehicle &&
+    next.photo === snapshot.photo &&
     next.carVisited === snapshot.carVisited &&
     next.shipVisited === snapshot.shipVisited
   ) {
@@ -205,6 +235,7 @@ function landInSeat() {
 function landOnPage() {
   drive.inside = false;
   drive.view = "road";
+  drive.photo = false;
   document.documentElement.classList.remove("is-driving");
   lockScroll(false);
   emit();

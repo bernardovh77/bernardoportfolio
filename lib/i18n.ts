@@ -171,6 +171,8 @@ const en = {
         terminalGo: "hailing a sky taxi on lane 7... doors opening",
       },
     },
+    /** The little photo in each vehicle, zoomed in */
+    photo: { label: "Photo", alt: "Bernardo with someone special", close: "Close" },
     linking: "Linking to vehicle",
     unlinking: "Back to the site",
     autopilot: "Autopilot",
@@ -374,6 +376,7 @@ const pt: UiStrings = {
         terminalGo: "chamando um táxi aéreo na faixa 7... abrindo as portas",
       },
     },
+    photo: { label: "Foto", alt: "Bernardo com alguém especial", close: "Fechar" },
     linking: "Conectando ao veículo",
     unlinking: "Voltando ao site",
     autopilot: "Piloto automático",

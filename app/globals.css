@@ -3035,6 +3035,88 @@ html.is-locked {
     transform-origin: left;
     animation: travel-progress var(--transport) var(--ease-in-out) both;
   }
+
+  /* The little photo in the car and the ship, pointed at and zoomed in */
+  .drive__hit[data-keepsake] {
+    cursor: pointer;
+  }
+  .drive-photo {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    padding: 72px var(--gutter) 88px;
+    pointer-events: none;
+    visibility: hidden;
+    background: rgb(4 2 10 / 0.74);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    transition:
+      opacity 0.25s,
+      visibility 0s 0.25s;
+  }
+  .drive-photo[data-open] {
+    pointer-events: auto;
+    visibility: visible;
+    opacity: 1;
+    cursor: zoom-out;
+    transition: opacity 0.25s;
+  }
+  .drive-photo__card {
+    position: relative;
+    width: min(64vw, calc((100dvh - 180px) * 4 / 3), 980px);
+    margin: 0;
+    padding: 8px;
+    background: #f3eef8;
+    border-radius: 6px;
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--a) 40%, transparent),
+      0 24px 70px rgb(0 0 0 / 0.6),
+      0 0 60px color-mix(in oklab, #a55cff 30%, transparent);
+    rotate: -1.2deg;
+  }
+  .drive-photo[data-open] .drive-photo__card {
+    animation: drive-photo-in 0.55s var(--ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) both;
+  }
+  .drive-photo__img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 3px;
+  }
+  .drive-photo__heart {
+    position: absolute;
+    top: 50%;
+    right: -26px;
+    width: 52px;
+    height: auto;
+    translate: 0 -50%;
+    fill: #a855f7;
+    filter: drop-shadow(0 0 8px #a855f7) drop-shadow(0 0 22px rgb(168 85 247 / 0.6));
+    opacity: 0;
+  }
+  .drive-photo[data-open] .drive-photo__heart {
+    animation:
+      drive-heart-pop 0.45s 0.4s cubic-bezier(0.3, 1.6, 0.5, 1) both,
+      drive-heart-beat 1.6s 0.9s ease-in-out infinite;
+  }
+  .drive-photo__close {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    translate: -50% 0;
+  }
+  @media (max-width: 720px) {
+    .drive-photo__card {
+      width: min(84vw, 560px);
+      padding: 6px;
+    }
+    .drive-photo__heart {
+      right: -18px;
+      width: 38px;
+    }
+  }
 }
 
 /* ──────────────────────────────── Motion ───────────────────────────── */
@@ -3339,6 +3421,42 @@ html.is-locked {
   100% {
     transform: scaleY(1) scaleX(0);
     opacity: 0;
+  }
+}
+
+@keyframes drive-photo-in {
+  from {
+    opacity: 0.3;
+    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) scale(0.06);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes drive-heart-pop {
+  from {
+    opacity: 0;
+    scale: 0.2;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes drive-heart-beat {
+  0%,
+  40%,
+  100% {
+    scale: 1;
+  }
+  20% {
+    scale: 1.14;
+  }
+  30% {
+    scale: 1.04;
   }
 }
 

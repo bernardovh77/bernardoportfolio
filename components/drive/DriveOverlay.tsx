@@ -1,14 +1,16 @@
 "use client";
 
-import { type CSSProperties, type PointerEvent, useEffect, useSyncExternalStore } from "react";
+import { type CSSProperties, type PointerEvent, useEffect, useState, useSyncExternalStore } from "react";
 import { carOSStore, getCarOS } from "@/lib/car/os";
 import {
   drive,
   driveStore,
   forceLeaveRide,
   leaveRide,
+  pickKeepsake,
   pickScreen,
   setView,
+  showPhoto,
   toggleView,
   TRANSPORT_MS,
   VEHICLE_DISTRICT,
@@ -16,14 +18,25 @@ import {
 import { useMediaQuery } from "@/lib/hooks";
 import { THEMES } from "@/lib/themes";
 import { useExperience } from "@/components/experience/ExperienceProvider";
+import { PhotoView } from "./PhotoView";
 
 type PadButton = "up" | "down" | "left" | "right" | "a" | "b" | "fire" | "use" | "enter" | "escape";
 
+function toNdc(event: PointerEvent<HTMLElement>) {
+  return [(event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1] as const;
+}
+
 /** Where a pointer event lands on the console screen (null when it misses). */
 function onScreen(event: PointerEvent<HTMLElement>) {
-  const x = (event.clientX / window.innerWidth) * 2 - 1;
-  const y = -(event.clientY / window.innerHeight) * 2 + 1;
-  return pickScreen(x, y);
+  return pickScreen(...toNdc(event));
+}
+
+/** Is the pointer on the vehicle's little photo? (Shows the hand cursor and locks the custom one.) */
+function overKeepsake(event: PointerEvent<HTMLElement>) {
+  const over = pickKeepsake(...toNdc(event));
+  event.currentTarget.toggleAttribute("data-keepsake", over);
+  document.documentElement.classList.toggle("is-sign-hover", over);
+  return over;
 }
 
 function blurAfterClick(event: { currentTarget: HTMLElement }) {
@@ -38,7 +51,7 @@ function blurAfterClick(event: { currentTarget: HTMLElement }) {
  */
 export function DriveOverlay() {
   const { t, lang, theme } = useExperience();
-  const { phase, view, vehicle } = useSyncExternalStore(
+  const { phase, view, vehicle, photo } = useSyncExternalStore(
     driveStore.subscribe,
     driveStore.getSnapshot,
     driveStore.getServerSnapshot,
@@ -47,6 +60,8 @@ export function DriveOverlay() {
   const touch = useMediaQuery("(pointer: coarse)");
   const active = phase !== "off";
   const vocab = t.drive.vehicles[vehicle];
+  /** Where the photo zooms in from (offset from the middle of the window, px) */
+  const [photoFrom, setPhotoFrom] = useState({ x: 0, y: 0 });
 
   // Each ride belongs to its district: travelling elsewhere drops you out
   useEffect(() => {
@@ -69,6 +84,15 @@ export function DriveOverlay() {
         return;
       }
       if (event.metaKey) return; // browser shortcuts stay the browser's
+      if (drive.photo) {
+        // The photo is open: Esc (or Enter, Space) closes it, and nothing reaches the games
+        if (down && /^(Escape|Enter|NumpadEnter|Space)$/.test(event.code)) showPhoto(false);
+        if (!event.ctrlKey) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        return;
+      }
       const doomOn = carOS.mode === "doom";
       if (down && !event.repeat && !doomOn) {
         if (event.code === "KeyV") {
@@ -99,6 +123,7 @@ export function DriveOverlay() {
       window.removeEventListener("keyup", onKey, true);
       window.removeEventListener("blur", onBlur);
       carOS.releaseAll();
+      document.documentElement.classList.remove("is-sign-hover");
     };
   }, [active]);
 
@@ -122,9 +147,19 @@ export function DriveOverlay() {
   const hints = view === "screen" || hintKey === "doom" ? [...base, ...extra] : [];
 
   const onPointer = (kind: "down" | "move" | "up") => (event: PointerEvent<HTMLDivElement>) => {
-    if (drive.phase !== "inside") return;
-    const point = onScreen(event);
+    if (drive.phase !== "inside" || drive.photo) return;
     const carOS = getCarOS();
+    if (kind === "down" && overKeepsake(event)) {
+      // The little photo: zoom into it (and keep the click from moving the focus off its close button)
+      event.preventDefault();
+      setPhotoFrom({ x: event.clientX - window.innerWidth / 2, y: event.clientY - window.innerHeight / 2 });
+      carOS.releaseAll();
+      event.currentTarget.removeAttribute("data-keepsake");
+      document.documentElement.classList.remove("is-sign-hover");
+      showPhoto(true);
+      return;
+    }
+    const point = onScreen(event);
     if (kind === "down") {
       if (point) {
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -136,6 +171,7 @@ export function DriveOverlay() {
       return;
     }
     if (kind === "move") {
+      if (event.pointerType === "mouse") overKeepsake(event);
       if (point) carOS.pointer("move", point.x, point.y);
       return;
     }
@@ -273,6 +309,8 @@ export function DriveOverlay() {
           )}
         </>
       )}
+
+      {phase === "inside" && <PhotoView open={photo} from={photoFrom} />}
 
       {transporting && (
         <div className="drive-fx" key={phase} data-dir={phase === "entering" ? "in" : "out"} role="status">

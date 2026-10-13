@@ -3,7 +3,7 @@
 import { type RefObject, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { AdditiveBlending, Color, DoubleSide, type Group, type Mesh, ShaderMaterial, Vector3 } from "three";
-import { SHIP_CABIN, SHIP_POSITION, SHIP_SCREEN_CENTER, SHIP_STICK_PIVOT } from "@/lib/car/ship";
+import { SHIP_CABIN, SHIP_EYE, SHIP_POSITION, SHIP_SCREEN_CENTER, SHIP_STICK_PIVOT } from "@/lib/car/ship";
 import type { VehicleMotion } from "@/lib/car/cabin";
 import { drive, ridingIn } from "@/lib/drive";
 import { THEMES } from "@/lib/themes";
@@ -30,13 +30,22 @@ import {
   shipHudGeometry,
   shipScreenGeometry,
 } from "./cockpitGeometry";
+import {
+  buildFrame,
+  createHitMaterial,
+  createPhotoMaterial,
+  FRAME_CENTER,
+  FRAME_PHOTO,
+  photoGeometry,
+  useKeepsakePick,
+} from "../../vehicle/keepsake";
 import { cityFlow, type CityRide } from "./flow";
 import { SKY_AHEAD, SKY_SPAN, skyTraffic } from "./skyLanes";
 
 /**
  * The cockpit of the sky taxi: canopy, console, stick, the holographic HUD,
- * the radar and systems displays, and the console screen running NV-77 OS
- * (and DOOM), the same one as in the desert car.
+ * the radar and systems displays, a little photo frame on the dash, and the
+ * console screen running NV-77 OS (and DOOM), the same one as in the desert car.
  * Only built the first time someone hails the taxi.
  */
 
@@ -368,12 +377,21 @@ function drawDisplays(ctx: CanvasRenderingContext2D, blips: Float32Array, blipCo
 
 const inShip = () => ridingIn("ship");
 
+/** A little photo frame stands on the right of the dash, turned toward the pilot and leaning back. */
+const FRAME_SPOT = new Vector3(0.5, 0.909, -0.53);
+const FRAME_YAW = Math.atan2(SHIP_EYE.x - FRAME_SPOT.x, SHIP_EYE.z - FRAME_SPOT.z);
+
 function createParts(tier: "high" | "low") {
   const hud = createCanvasTexture(512, 256);
   const displays = createCanvasTexture(512, 256);
   const traffic = skyTraffic(tier).all;
   return {
     cockpit: buildCockpit(),
+    frame: buildFrame(),
+    photo: photoGeometry(FRAME_PHOTO),
+    photoMaterial: createPhotoMaterial(),
+    frameHit: photoGeometry(0.12),
+    hitMaterial: createHitMaterial(),
     stick: buildStick(),
     screen: shipScreenGeometry(),
     aux: auxGeometry(),
@@ -529,12 +547,14 @@ export function ShipInterior({
 }) {
   const groupRef = useRef<Group>(null);
   const stickRef = useRef<Group>(null);
+  const frameRef = useRef<Group>(null);
   const screenRef = useRef<Mesh>(null);
   const p = shipParts(tier, lights);
   const screenMaterial = getConsole().screenMaterial;
 
   usePrecompile(groupRef, inShip);
   useScreenPick("ship", screenRef);
+  useKeepsakePick("ship", frameRef);
 
   useFrame((state, delta) => {
     if (groupRef.current) updateShip(groupRef.current, stickRef.current, ride.current, state.clock.elapsedTime, delta);
@@ -543,6 +563,11 @@ export function ShipInterior({
   return (
     <group ref={groupRef} visible={false} position={SHIP_POSITION.toArray()}>
       <mesh geometry={p.cockpit} material={p.cabinMaterial} frustumCulled={false} />
+      <group ref={frameRef} position={FRAME_SPOT.toArray()} rotation={[-0.2, FRAME_YAW, 0, "YXZ"]}>
+        <mesh geometry={p.frame} material={p.cabinMaterial} frustumCulled={false} />
+        <mesh geometry={p.photo} material={p.photoMaterial} position={[0, FRAME_CENTER.y, 0.0022]} frustumCulled={false} />
+        <mesh geometry={p.frameHit} material={p.hitMaterial} position={[0, FRAME_CENTER.y, 0.004]} />
+      </group>
       <group ref={stickRef} position={SHIP_STICK_PIVOT.toArray()}>
         <mesh geometry={p.stick} material={p.cabinMaterial} frustumCulled={false} />
       </group>

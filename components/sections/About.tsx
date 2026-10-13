@@ -7,27 +7,22 @@ import { useFinePointer, useReducedMotion } from "@/lib/hooks";
 import { useExperience } from "@/components/experience/ExperienceProvider";
 import { ScrambleText } from "@/components/ui/ScrambleText";
 
-/** Placeholder portrait: a holographic bust. Swap it for a real photo later. */
-function Avatar() {
+/** The ID photo, under the card's scanlines and corner marks. */
+function Avatar({ name }: { name: string }) {
   return (
-    <svg className="id-card__avatar" viewBox="0 0 120 140" aria-hidden="true" focusable="false">
+    <svg className="id-card__avatar" viewBox="0 0 120 140" role="img" aria-label={name}>
       <defs>
-        <linearGradient id="avatar-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="var(--a)" stopOpacity="0.55" />
-          <stop offset="1" stopColor="var(--b)" stopOpacity="0.15" />
+        <linearGradient id="avatar-tint" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0.45" stopColor="var(--a)" stopOpacity="0" />
+          <stop offset="1" stopColor="var(--a)" stopOpacity="0.22" />
         </linearGradient>
         <pattern id="avatar-scan" width="4" height="4" patternUnits="userSpaceOnUse">
-          <rect width="4" height="1.4" fill="var(--void)" opacity="0.55" />
+          <rect width="4" height="1.2" fill="var(--void)" opacity="0.18" />
         </pattern>
       </defs>
       <rect x="0" y="0" width="120" height="140" fill="var(--abyss)" />
-      <path
-        d="M60 26c13 0 22 10 22 24 0 11-5 20-11 24v6c14 3 29 12 33 30H16c4-18 19-27 33-30v-6c-6-4-11-13-11-24 0-14 9-24 22-24z"
-        fill="url(#avatar-fill)"
-        stroke="var(--a)"
-        strokeWidth="1.2"
-      />
-      <path d="M38 50h44M40 58h40" stroke="var(--a)" strokeOpacity="0.35" strokeWidth="0.8" />
+      <image href="/images/profile.jpg" x="0" y="0" width="120" height="140" preserveAspectRatio="xMidYMid slice" />
+      <rect x="0" y="0" width="120" height="140" fill="url(#avatar-tint)" />
       <rect x="0" y="0" width="120" height="140" fill="url(#avatar-scan)" />
       <path
         d="M2 2h14M2 2v14M118 2h-14M118 2v14M2 138h14M2 138v-14M118 138h-14M118 138v-14"
@@ -82,7 +77,7 @@ function IdCard() {
           <span className="id-card__code">{THEMES[theme].code}</span>
         </div>
         <div className="id-card__body">
-          <Avatar />
+          <Avatar name={profile.name} />
           <dl className="id-card__fields">
             {rows.map((row) => (
               <div key={row.label}>
