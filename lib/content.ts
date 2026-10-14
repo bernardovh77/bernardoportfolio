@@ -281,8 +281,8 @@ export const journey: JourneyEntry[] = [
     year: "2024",
     title: { en: "First interactions with code", pt: "Primeiros contatos com código" },
     text: {
-      en: "Placeholder. Tutorials, tiny experiments and a lot of trial and error.",
-      pt: "Exemplo. Tutoriais, pequenos experimentos e muita tentativa e erro.",
+      en: "Tutorials, tiny experiments and a lot of trial and error.",
+      pt: "Tutoriais, pequenos experimentos e muita tentativa e erro.",
     },
   },
   {
@@ -290,8 +290,8 @@ export const journey: JourneyEntry[] = [
     year: "2025",
     title: { en: "First programs", pt: "Primeiros programas" },
     text: {
-      en: "Placeholder. Small programs written from start to finish, bugs included.",
-      pt: "Exemplo. Pequenos programas escritos do começo ao fim, com bugs e tudo.",
+      en: "Small programs written from start to finish, bugs included.",
+      pt: "Pequenos programas escritos do começo ao fim, com bugs e tudo.",
     },
   },
   {
@@ -302,8 +302,8 @@ export const journey: JourneyEntry[] = [
       pt: "Comecei Ciência da Computação",
     },
     text: {
-      en: "Placeholder. Algorithms, data structures and a lot of late nights.",
-      pt: "Exemplo. Algoritmos, estruturas de dados e muitas noites viradas.",
+      en: "Algorithms, data structures and a lot of late nights.",
+      pt: "Algoritmos, estruturas de dados e muitas noites viradas.",
     },
   },
   {
@@ -311,8 +311,8 @@ export const journey: JourneyEntry[] = [
     year: "2026",
     title: { en: "Launched this portfolio", pt: "Lancei este portfólio" },
     text: {
-      en: "Placeholder. My first serious 3D project on the web.",
-      pt: "Exemplo. Meu primeiro projeto sério de 3D na web.",
+      en: "My first serious 3D project on the web.",
+      pt: "Meu primeiro projeto sério de 3D na web.",
     },
   },
   {
