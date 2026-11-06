@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { music as surfaceTrack, type Track, underworksMusic } from "@/lib/content";
+import { redlineMusic, music as surfaceTrack, type Track } from "@/lib/content";
 import { localize } from "@/lib/i18n";
 import { musicStore, readMusicPreference, saveMusicPreference } from "@/lib/music";
 import type { ThemeId } from "@/lib/themes";
@@ -11,7 +11,7 @@ import { PauseIcon, PlayIcon } from "./Icons";
 
 const FADE_IN = 2.5; // seconds
 const FADE_OUT = 0.6; // seconds
-/** How long the two songs overlap when you travel to or from the Underworks */
+/** How long the songs overlap (or fade out) when you travel to or from Redline */
 const CROSSFADE = 3; // seconds
 
 // Equalizer bands in Hz, from bass to treble, one per bar
@@ -24,17 +24,17 @@ const BANDS = [
 ] as const;
 // How fast each bar re-adapts to its band's loudest and quietest moments (per second)
 const ADAPT = 0.15;
-// The Underworks equalizer is a stepped meter with this many segments
-const SEGMENTS = 8;
 
 // Input that can give a page permission to play sound. Phones only grant it
 // when the finger lifts, so listening to pointerdown alone isn't enough.
 const GESTURES = ["pointerdown", "pointerup", "touchend", "click", "keydown"] as const;
 
-type Slot = "surface" | "underworks";
-const TRACKS: Record<Slot, Track> = { surface: surfaceTrack, underworks: underworksMusic };
+type Slot = "surface" | "redline";
+const TRACKS: Record<Slot, Track> = { surface: surfaceTrack, redline: redlineMusic };
 const SLOTS = Object.keys(TRACKS) as Slot[];
-const slotFor = (theme: ThemeId): Slot => (theme === "underworks" ? "underworks" : "surface");
+const slotFor = (theme: ThemeId): Slot => (theme === "redline" ? "redline" : "surface");
+/** A district without a song of its own is quiet: the music fades out while you're there. */
+const hasSong = (slot: Slot) => Boolean(TRACKS[slot].src);
 
 type Graph = {
   context: AudioContext;
@@ -138,7 +138,10 @@ function whenRunning(context: AudioContext, timeout = 800): Promise<boolean> {
 function soundMayAutoplay() {
   const nav = navigator as Navigator & { getAutoplayPolicy?: (type: "mediaelement") => string };
   try {
-    return typeof nav.getAutoplayPolicy !== "function" || nav.getAutoplayPolicy("mediaelement") === "allowed";
+    return (
+      typeof nav.getAutoplayPolicy !== "function" ||
+      nav.getAutoplayPolicy("mediaelement") === "allowed"
+    );
   } catch {
     return true;
   }
@@ -169,8 +172,8 @@ type Controller = { setSlot: (slot: Slot) => void };
 
 /**
  * Looping background music with a now-playing credit and a live equalizer.
- * The surface and the Underworks each have their own song, which cross-fade
- * as soon as you start traveling. It starts as soon as the page opens where the
+ * Redline can have a song of its own, which cross-fades with the main one as
+ * soon as you start traveling; while it has none, the music fades out there. It starts as soon as the page opens where the
  * browser allows it; browsers that block sound until the visitor interacts get it
  * on the first click, tap or key press instead. It fades in, and remembers if the
  * visitor mutes it.
@@ -183,7 +186,7 @@ export function MusicPlayer() {
     musicStore.getServerSnapshot,
   );
   const surfaceRef = useRef<HTMLAudioElement>(null);
-  const underworksRef = useRef<HTMLAudioElement>(null);
+  const redlineRef = useRef<HTMLAudioElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const barsRef = useRef<HTMLSpanElement>(null);
   const controllerRef = useRef<Controller | null>(null);
@@ -191,7 +194,7 @@ export function MusicPlayer() {
   useEffect(() => {
     const elements: Record<Slot, HTMLAudioElement | null> = {
       surface: surfaceRef.current,
-      underworks: underworksRef.current,
+      redline: redlineRef.current,
     };
     const main = elements.surface;
     if (!main || !surfaceTrack.src) {
@@ -203,7 +206,7 @@ export function MusicPlayer() {
     const probe = new AbortController();
     const available: Record<Slot, boolean> = {
       surface: true,
-      underworks: Boolean(underworksMusic.src && elements.underworks),
+      redline: Boolean(redlineMusic.src && elements.redline),
     };
     let graph: Graph | null = null;
     let active: Slot = "surface";
@@ -219,14 +222,17 @@ export function MusicPlayer() {
     const floors = BANDS.map(() => 0.3);
     const switchTimers: number[] = [];
 
-    const audioOf = (slot: Slot) => elements[slot] ?? main;
+    // The song a district plays, or null where it's quiet
+    const songOf = (slot: Slot) =>
+      slot === "surface" ? main : available[slot] ? elements[slot] : null;
     const showCredit = () => {
       if (panelRef.current) panelRef.current.dataset.track = active;
     };
 
     // Sets a song's level: through its gain node, or its own volume as a fallback
     const setLevel = (slot: Slot, value: number, seconds: number) => {
-      const audio = audioOf(slot);
+      const audio = songOf(slot);
+      if (!audio) return;
       const input = graph ? inputFor(graph, audio) : null;
       if (graph && input) {
         rampParam(graph.context, input.gain, value, seconds);
@@ -239,7 +245,8 @@ export function MusicPlayer() {
         rampParam(graph.context, graph.master.gain, value, seconds);
       } else {
         // No Web Audio: the active song's volume is the master
-        fadeVolume(audioOf(active), value * TRACKS[active].volume, seconds);
+        const audio = songOf(active);
+        if (audio) fadeVolume(audio, value * TRACKS[active].volume, seconds);
       }
     };
 
@@ -262,11 +269,7 @@ export function MusicPlayer() {
           const range = Math.max(0.12, peaks[i] - floors[i]);
           const height = Math.min(1, Math.max(0, (value - floors[i]) / range)) * audible;
           const bar = bars[i];
-          if (bar) {
-            bar.style.transform = `scaleY(${Math.max(0.12, height).toFixed(3)})`;
-            // The stepped meter (Underworks) lights whole segments
-            bar.style.setProperty("--level", String(Math.ceil(height * SEGMENTS) / SEGMENTS));
-          }
+          if (bar) bar.style.transform = `scaleY(${Math.max(0.12, height).toFixed(3)})`;
           if (i === 0) {
             // The neon pulse jumps on a kick and fades out more slowly
             const kick = height * height;
@@ -286,7 +289,6 @@ export function MusicPlayer() {
       world.audioLevel = 0;
       bars.forEach((bar) => {
         bar.style.transform = "";
-        bar.style.removeProperty("--level");
       });
     };
 
@@ -313,13 +315,18 @@ export function MusicPlayer() {
       window.clearTimeout(pauseTimer);
       graph = graph ?? getGraph();
       const slot = active;
-      const audio = audioOf(slot);
+      // In a quiet district, the main song is started silently and paused right away:
+      // browsers only let it play later (back in the other districts) once it has played
+      const quiet = !songOf(slot);
+      const audio = songOf(slot) ?? main;
       if (graph) {
         // With Web Audio the gain nodes set the volume; otherwise the element does
         SLOTS.forEach((s) => {
-          const input = inputFor(graph as Graph, audioOf(s));
-          if (input) audioOf(s).volume = 1;
-          if (input && s !== slot) input.gain.value = 0;
+          const song = songOf(s);
+          if (!song) return;
+          const input = inputFor(graph as Graph, song);
+          if (input) song.volume = 1;
+          if (input && (s !== slot || quiet)) input.gain.value = 0;
         });
         graph.context.resume().catch(() => {});
       } else {
@@ -331,6 +338,18 @@ export function MusicPlayer() {
         musicStore.setStatus("ready");
         waitForGesture();
       };
+      if (quiet) {
+        audio.play().then(() => {
+          if (id !== request) return;
+          if (!songOf(active)) audio.pause();
+          stopWaiting();
+          setMaster(1, 0.01);
+          musicStore.setStatus("playing");
+          cancelAnimationFrame(meterFrame);
+          meterFrame = requestAnimationFrame(meter);
+        }, blocked);
+        return;
+      }
       audio
         .play()
         .then(() => (graph ? whenRunning(graph.context) : true))
@@ -359,7 +378,7 @@ export function MusicPlayer() {
         return;
       }
       const id = ++request;
-      const audio = audioOf(active);
+      const audio = songOf(active) ?? main;
       audio.volume = 0;
       audio.play().then(
         () => {
@@ -380,25 +399,40 @@ export function MusicPlayer() {
       setMaster(0, FADE_OUT);
       window.clearTimeout(pauseTimer);
       pauseTimer = window.setTimeout(() => {
-        SLOTS.forEach((s) => audioOf(s).pause());
+        SLOTS.forEach((s) => songOf(s)?.pause());
       }, FADE_OUT * 1000);
       musicStore.setStatus("paused");
       stopMeter();
     };
 
-    // Travel between the surface and the Underworks: cross-fade the two songs.
+    // Travel to or from Redline: cross-fade the two songs, or fade out where it's quiet.
     // Each song keeps its place, so coming back picks up where it left off.
-    const setSlot = (wanted: Slot) => {
-      const next = available[wanted] ? wanted : "surface";
+    const setSlot = (next: Slot) => {
       if (next === active) return;
       const from = active;
       active = next;
       showCredit();
       if (musicStore.getSnapshot() !== "playing") return;
       const id = ++swap;
-      const incoming = audioOf(next);
-      const outgoing = audioOf(from);
+      const incoming = songOf(next);
+      const outgoing = songOf(from);
       if (incoming === outgoing) return;
+      const fadeOut = () => {
+        if (!outgoing) return;
+        setLevel(from, 0, CROSSFADE);
+        switchTimers.push(
+          window.setTimeout(
+            () => {
+              if (songOf(active) !== outgoing) outgoing.pause();
+            },
+            CROSSFADE * 1000 + 100,
+          ),
+        );
+      };
+      if (!incoming) {
+        fadeOut();
+        return;
+      }
       if (graph) inputFor(graph, incoming);
       if (graph) incoming.volume = 1;
       else incoming.volume = 0;
@@ -406,15 +440,7 @@ export function MusicPlayer() {
         () => {
           if (id !== swap) return;
           setLevel(next, TRACKS[next].volume, CROSSFADE);
-          setLevel(from, 0, CROSSFADE);
-          switchTimers.push(
-            window.setTimeout(
-              () => {
-                if (active !== from) outgoing.pause();
-              },
-              CROSSFADE * 1000 + 100,
-            ),
-          );
+          fadeOut();
         },
         () => {
           // Could not start the new song: stay on the old one
@@ -462,14 +488,10 @@ export function MusicPlayer() {
       stopMeter();
       musicStore.setStatus("unavailable");
     };
-    // If the Underworks song is missing, the main song keeps playing down there
-    const onUnderworksError = () => {
-      available.underworks = false;
-      if (active === "underworks") {
-        active = "surface";
-        showCredit();
-        if (musicStore.getSnapshot() === "playing") play();
-      }
+    // If Redline's song is missing, it's quiet there
+    const onRedlineError = () => {
+      available.redline = false;
+      if (active === "redline" && musicStore.getSnapshot() === "playing") play();
     };
 
     // Pause while the tab is in the background, fade back in on return
@@ -481,7 +503,7 @@ export function MusicPlayer() {
         swap++;
         window.clearTimeout(pauseTimer);
         setMaster(0, 0.05);
-        SLOTS.forEach((s) => audioOf(s).pause());
+        SLOTS.forEach((s) => songOf(s)?.pause());
         graph?.context.suspend().catch(() => {});
         stopMeter();
       } else if (resumeOnShow) {
@@ -494,7 +516,7 @@ export function MusicPlayer() {
     };
 
     main.addEventListener("error", onError);
-    elements.underworks?.addEventListener("error", onUnderworksError);
+    elements.redline?.addEventListener("error", onRedlineError);
     document.addEventListener("visibilitychange", onVisibility);
 
     // Check that the songs exist before showing the player. The songs
@@ -504,13 +526,13 @@ export function MusicPlayer() {
       .catch(() => {
         if (!probe.signal.aborted) onError();
       });
-    if (available.underworks) {
-      fetch(underworksMusic.src, { method: "HEAD", signal: probe.signal })
+    if (available.redline) {
+      fetch(redlineMusic.src, { method: "HEAD", signal: probe.signal })
         .then((response) => {
-          if (!response.ok) onUnderworksError();
+          if (!response.ok) onRedlineError();
         })
         .catch(() => {
-          if (!probe.signal.aborted) onUnderworksError();
+          if (!probe.signal.aborted) onRedlineError();
         });
     }
 
@@ -521,12 +543,12 @@ export function MusicPlayer() {
       controllerRef.current = null;
       stopWaiting();
       main.removeEventListener("error", onError);
-      elements.underworks?.removeEventListener("error", onUnderworksError);
+      elements.redline?.removeEventListener("error", onRedlineError);
       document.removeEventListener("visibilitychange", onVisibility);
       window.clearTimeout(pauseTimer);
       switchTimers.forEach((id) => window.clearTimeout(id));
       stopMeter();
-      SLOTS.forEach((s) => audioOf(s).pause());
+      SLOTS.forEach((s) => songOf(s)?.pause());
       musicStore.register(null);
       musicStore.setStatus("loading");
     };
@@ -539,18 +561,20 @@ export function MusicPlayer() {
   }, [wanted]);
 
   const playing = status === "playing";
+  // No song here: nothing to show
+  const quiet = !hasSong(wanted);
   const label = playing ? t.music.nowPlaying : status === "ready" ? t.music.ready : t.music.paused;
 
   return (
     <>
       <audio ref={surfaceRef} src={surfaceTrack.src || undefined} loop preload="none" />
-      <audio ref={underworksRef} src={underworksMusic.src || undefined} loop preload="none" />
+      {redlineMusic.src && <audio ref={redlineRef} src={redlineMusic.src} loop preload="none" />}
       <aside
         ref={panelRef}
         className="music"
         data-status={status}
         data-track="surface"
-        hidden={status === "loading" || status === "unavailable"}
+        hidden={status === "loading" || status === "unavailable" || quiet}
         aria-label={t.music.nowPlaying}
       >
         <button
@@ -569,7 +593,7 @@ export function MusicPlayer() {
         </span>
         <span className="music__meta">
           <span className="music__label">{label}</span>
-          {SLOTS.map((slot) => {
+          {SLOTS.filter(hasSong).map((slot) => {
             const track = TRACKS[slot];
             const name = localize(track.title, lang);
             const artist = localize(track.artist, lang);

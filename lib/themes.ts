@@ -4,7 +4,7 @@
  * (the CSS copies of these values live in app/globals.css).
  */
 
-export const THEME_IDS = ["city", "desert", "ocean", "underworks"] as const;
+export const THEME_IDS = ["city", "desert", "ocean", "redline"] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 
 export const DEFAULT_THEME: ThemeId = "city";
@@ -78,20 +78,21 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
     fogDensity: 0.0062,
     bloom: 1.45,
   },
-  // Beneath the Megacity: a foundry shaft where unfinished projects are still being built
-  underworks: {
-    id: "underworks",
-    code: "B-04",
-    coords: "35.6895N 139.6917E -128M",
+  // The racing district: a night circuit, with its own page (one lap of it)
+  redline: {
+    id: "redline",
+    code: "D-04",
+    // Interlagos, São Paulo
+    coords: "23.7036S 46.6997W",
     palette: {
-      a: "#f0902f",
-      b: "#d23a22",
-      signal: "#9fd6ff",
-      sky: "#070504",
-      fog: "#120d09",
+      a: "#ff2e43",
+      b: "#ffb52e",
+      signal: "#46ffa0",
+      sky: "#06030a",
+      fog: "#1a0812",
     },
-    fogDensity: 0.0071,
-    bloom: 1.05,
+    fogDensity: 0.0034,
+    bloom: 1.3,
   },
 };
 

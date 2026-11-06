@@ -53,8 +53,7 @@ export const links = {
 
 /**
  * Background music. Files live in public/music/ (change `src` to use
- * another one). If a file is missing, the player hides itself (or, for the
- * Underworks, keeps playing the main track).
+ * another one). If the main file is missing, the player hides itself.
  * Title and artist can be plain text, or { en, pt } to translate them.
  */
 export type Track = {
@@ -76,11 +75,16 @@ export const music: Track = {
   volume: 0.35,
 };
 
-/** Plays only in the Underworks. The two cross-fade when you travel. */
-export const underworksMusic: Track = {
-  src: "/music/underworks.mp3",
-  title: "Slag Engine",
-  artist: { en: "Original soundtrack", pt: "Trilha sonora original" },
+/**
+ * Redline's own song. It has none for now, so the music fades out while you're
+ * on the track and comes back when you leave. To give it one, put the file in
+ * public/music/, set `src` and fill in the title and artist: the two songs
+ * will cross-fade when you travel.
+ */
+export const redlineMusic: Track = {
+  src: "",
+  title: "",
+  artist: "",
   link: "",
   volume: 0.35,
 };
@@ -199,72 +203,176 @@ export const projects: Project[] = [
   },
 ];
 
-export type WipStatus = "blueprint" | "building" | "testing";
+/* ─────────────────────────────────────────────────────────────
+ *  REDLINE (the racing district)
+ *  Its page is one lap: the car in the garage, what you're into,
+ *  and the project on the dyno.
+ * ───────────────────────────────────────────────────────────── */
 
-export type WipProject = {
-  id: string;
-  title: string;
-  summary: Localized;
-  stack: string[];
-  /** How far along it is, from 0 to 100 */
-  progress: number;
-  /** blueprint = still planning, building = coding it, testing = almost there */
-  status: WipStatus;
-  /** When you expect to finish it */
-  eta: Localized;
-  /** Link to the source code (leave empty to hide the button) */
-  repo?: string;
-  /** Which blueprint drawing to use on the card */
-  art: "tower" | "dome" | "gear";
+export type GarageSpec = { label: Localized; value: Localized };
+export type ModStatus = "done" | "next" | "list";
+
+/** The car you drive, and what's been done to it. */
+export const garage = {
+  make: "Volkswagen",
+  model: "Polo 170 TSI",
+  year: "2023",
+  specs: [
+    {
+      label: { en: "Engine", pt: "Motor" },
+      value: {
+        en: "1.0 TSI EA211, turbo three-cylinder",
+        pt: "1.0 TSI EA211, três cilindros turbo",
+      },
+    },
+    {
+      label: { en: "Output", pt: "Potência" },
+      value: { en: "110 hp · 17 kgfm", pt: "110 cv · 17 kgfm" },
+    },
+    { label: { en: "Gearbox", pt: "Câmbio" }, value: { en: "Manual", pt: "Manual" } },
+  ] satisfies GarageSpec[],
+  /** done = fitted, next = coming up, list = on the wish list */
+  mods: [
+    { status: "done", name: { en: "Drop-in air filter", pt: "Filtro de ar inbox" } },
+    { status: "next", name: { en: "Stage 1 remap", pt: "Remap Stage 1" } },
+    { status: "list", name: { en: "Blow-off valve kit", pt: "Kit de válvula blow-off" } },
+    { status: "list", name: { en: "Cat-back exhaust", pt: "Escape cat-back" } },
+  ] satisfies { status: ModStatus; name: Localized }[],
+  rule: {
+    en: "House rule: every mod has to be reversible.",
+    pt: "Regra da casa: toda modificação tem que ser reversível.",
+  } satisfies Localized,
 };
 
-/**
- * Projects still under development. They live in the Underworks: each one
- * gets a work order on that page and a construction site in the 3D shaft,
- * built up to its progress.
- */
-export const wipProjects: WipProject[] = [
+/** What you geek out on, one card each. */
+export const carInterests: { id: string; title: Localized; text: Localized }[] = [
   {
-    id: "campus-map",
-    title: "Campus Map",
-    summary: {
-      en: "Placeholder project. An interactive map of the university with class schedules and a room finder.",
-      pt: "Projeto de exemplo. Um mapa interativo da universidade com horários de aula e busca de salas.",
+    id: "boost",
+    title: { en: "Turbos and boost", pt: "Turbo e pressão" },
+    text: {
+      en: "How a turbo builds boost, how it's kept in check, and what each tuning stage asks of it.",
+      pt: "Como o turbo gera pressão, como ela é controlada e o que cada stage de preparação exige dele.",
     },
-    stack: ["Next.js", "Leaflet", "PostgreSQL"],
-    progress: 45,
-    status: "building",
-    eta: { en: "Early 2027", pt: "Início de 2027" },
-    repo: "https://github.com/bernardovh77",
-    art: "tower",
   },
   {
-    id: "chat-relay",
-    title: "Chat Relay",
-    summary: {
-      en: "Placeholder project. A real-time chat server with rooms, typing indicators and message history.",
-      pt: "Projeto de exemplo. Um servidor de chat em tempo real com salas, indicador de digitação e histórico.",
+    id: "ecu",
+    title: { en: "ECU tuning", pt: "Remap de ECU" },
+    text: {
+      en: "Flash remaps over piggyback boxes, and how much torque the stock parts can really take.",
+      pt: "Remap direto na ECU em vez de módulos piggyback, e quanto torque as peças originais aguentam de verdade.",
     },
-    stack: ["Node.js", "WebSockets", "Redis"],
-    progress: 70,
-    status: "testing",
-    eta: { en: "Late 2026", pt: "Fim de 2026" },
-    art: "dome",
   },
   {
-    id: "habit-engine",
-    title: "Habit Engine",
-    summary: {
-      en: "Placeholder project. A habit tracker with streaks, reminders and a small public API.",
-      pt: "Projeto de exemplo. Um rastreador de hábitos com sequências, lembretes e uma pequena API pública.",
+    id: "sound",
+    title: { en: "Engine sound", pt: "Som de motor" },
+    text: {
+      en: "Why a three-cylinder sounds the way it does, and what an exhaust really changes. REV-BENCH is built around that question.",
+      pt: "Por que um três cilindros soa do jeito que soa, e o que um escape muda de verdade. O REV-BENCH nasceu em volta dessa pergunta.",
     },
-    stack: ["React Native", "TypeScript", "Supabase"],
-    progress: 15,
-    status: "blueprint",
-    eta: { en: "2027", pt: "2027" },
-    art: "gear",
+  },
+  {
+    id: "driving",
+    title: { en: "Driving", pt: "Pilotagem" },
+    text: {
+      en: "Rev-matched downshifts and getting the most out of a manual gearbox.",
+      pt: "Reduções com punta-tacco e tirar o máximo de um câmbio manual.",
+    },
+  },
+  {
+    id: "hot-hatches",
+    title: { en: "Hot hatches", pt: "Hot hatches" },
+    text: {
+      en: "Following the German and Brazilian hot hatch market. The Golf R is the one I've driven.",
+      pt: "Acompanho o mercado de hot hatches alemão e brasileiro. O Golf R é o que eu já dirigi.",
+    },
+  },
+  {
+    id: "engines",
+    title: { en: "How engines are built", pt: "Como motores são feitos" },
+    text: {
+      en: "Comparing how engines solve the same problems: BMW's B58 against the S58, 48 V mild hybrids, fuel systems.",
+      pt: "Comparar como cada motor resolve os mesmos problemas: o B58 contra o S58 da BMW, híbridos leves de 48 V, sistemas de injeção.",
+    },
   },
 ];
+
+/**
+ * The project on the dyno: the one you're building right now.
+ * Update `stages` and `updated` as it moves along.
+ */
+export const revBench = {
+  title: "REV-BENCH",
+  repo: "https://github.com/bernardovh77/REV-BENCH",
+  status: { en: "In development", pt: "Em desenvolvimento" } satisfies Localized,
+  updated: { en: "November 2026", pt: "novembro de 2026" } satisfies Localized,
+  summary: {
+    en: "A combustion engine test bench in the browser. Pick an engine, change its displacement, compression, cams, headers and exhaust, and hear and see the difference in real time. The sound comes from a physics simulation of the gas moving through the engine, not from recordings.",
+    pt: "Uma bancada de testes de motores a combustão no navegador. Escolha um motor, mude cilindrada, compressão, comandos, coletores e escape, e ouça e veja a diferença em tempo real. O som vem de uma simulação física do gás passando pelo motor, não de gravações.",
+  } satisfies Localized,
+  /** Roadmap stages done, out of the ones needed for the first release */
+  stages: { done: 53, total: 109 },
+  next: {
+    en: "Next up: the engine running live in the browser",
+    pt: "Próximo passo: o motor rodando ao vivo no navegador",
+  } satisfies Localized,
+  /** The roadmap's phases, in order; `current` is the one being worked on */
+  phases: [
+    { en: "Engine in the browser", pt: "Motor no navegador" },
+    { en: "Real-engine sound", pt: "Som de motor real" },
+    { en: "3D engine", pt: "Motor em 3D" },
+    { en: "Turbo", pt: "Turbo" },
+    { en: "Knock and limits", pt: "Detonação e limites" },
+    { en: "More engines", pt: "Mais motores" },
+    { en: "Release", pt: "Lançamento" },
+  ] satisfies Localized[],
+  current: 0,
+  /** What already works */
+  today: [
+    {
+      en: "Five preset engines: inline-4, inline-6, cross-plane and flat-plane V8, and a boxer four, each with a researched exhaust.",
+      pt: "Cinco motores prontos: 4 em linha, 6 em linha, V8 cross-plane e flat-plane e um boxer de quatro, cada um com um escape pesquisado.",
+    },
+    {
+      en: "The sound rendered the way a listener hears it: behind the car, beside it, or from the driver's seat.",
+      pt: "O som renderizado como quem ouve: atrás do carro, ao lado dele ou no banco do motorista.",
+    },
+    {
+      en: "Physics from the gas up: cams, valves, combustion, a rev limiter, and pressure waves running through the pipes.",
+      pt: "Física a partir do gás: comandos, válvulas, combustão, corte de giro e ondas de pressão correndo pelos tubos.",
+    },
+    {
+      en: "251 native tests and almost 5 million checks.",
+      pt: "251 testes nativos e quase 5 milhões de verificações.",
+    },
+  ] satisfies Localized[],
+  /** On the dyno: the simulation's peaks against the real engines' published ones */
+  dyno: [
+    {
+      engine: { en: "2.0 L inline-4", pt: "2.0 L 4 em linha" },
+      real: "Toyota 1AZ-FE",
+      torque: [188, 190],
+      power: [113, 108],
+    },
+    {
+      engine: { en: "3.0 L inline-6", pt: "3.0 L 6 em linha" },
+      real: "BMW M54B30",
+      torque: [297, 300],
+      power: [167, 170],
+    },
+    {
+      engine: { en: "2.0 L flat-4", pt: "2.0 L boxer 4" },
+      real: "Subaru FB20",
+      torque: [188, 196],
+      power: [112, 110],
+    },
+  ] satisfies {
+    engine: Localized;
+    real: string;
+    torque: [number, number];
+    power: [number, number];
+  }[],
+  stack: ["C11", "WebAssembly", "AudioWorklet", "TypeScript", "Vite"],
+};
 
 export type JourneyEntry = {
   id: string;

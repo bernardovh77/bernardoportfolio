@@ -8,25 +8,25 @@ import { Contact } from "./Contact";
 import { Footer } from "./Footer";
 import { Hero } from "./Hero";
 import { Journey } from "./Journey";
+import { RedlinePage } from "./RedlinePage";
 import { Skills } from "./Skills";
-import { UnderworksPage } from "./UnderworksPage";
 import { Work } from "./Work";
 
 /**
- * The page content. The three surface districts share the same sections;
- * the Underworks is a different place, with its own page.
+ * The page content. Megacity, the desert and the ocean share the same sections;
+ * Redline, the racing district, has its own page.
  */
 export function DistrictContent() {
   const { theme } = useExperience();
-  const underworks = theme === "underworks";
+  const redline = theme === "redline";
 
   // The page height just changed, so everything tied to scrolling re-measures
   useEffect(() => {
     const id = requestAnimationFrame(() => ScrollTrigger.refresh());
     return () => cancelAnimationFrame(id);
-  }, [underworks]);
+  }, [redline]);
 
-  if (underworks) return <UnderworksPage />;
+  if (redline) return <RedlinePage />;
   return (
     <>
       <main id="main" tabIndex={-1}>

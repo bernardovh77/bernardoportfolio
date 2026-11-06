@@ -5,7 +5,7 @@ import { profile } from "@/lib/content";
 import { lockScroll, onScrollProgress, scrollToTarget } from "@/lib/scroll";
 import { THEMES } from "@/lib/themes";
 import { useExperience } from "@/components/experience/ExperienceProvider";
-import { ArrowUpIcon, CloseIcon, LogoMark, MenuIcon } from "./Icons";
+import { CloseIcon, ExitIcon, LogoMark, MenuIcon } from "./Icons";
 import { LangSwitch } from "./LangSwitch";
 
 export const SECTION_IDS = ["about", "skills", "work", "journey", "contact"] as const;
@@ -42,12 +42,12 @@ function useActiveSection(enabled: boolean) {
 }
 
 export function TopBar() {
-  const { t, theme, traveling, returnToSurface } = useExperience();
-  // Down in the Underworks there are no sections to jump to, only the way back up
-  const underworks = theme === "underworks";
-  const active = useActiveSection(!underworks);
+  const { t, theme, traveling, leaveTrack } = useExperience();
+  // On the track there are no sections to jump to, only the way off it
+  const redline = theme === "redline";
+  const active = useActiveSection(!redline);
   const [menuOpen, setMenuOpen] = useState(false);
-  const open = menuOpen && !underworks;
+  const open = menuOpen && !redline;
   const headerRef = useRef<HTMLElement>(null);
 
   // Solid background once the page scrolls
@@ -97,14 +97,14 @@ export function TopBar() {
         }}
       >
         <LogoMark size={28} />
-        {underworks ? (
-          <span className="topbar__sector">{THEMES.underworks.code}</span>
+        {redline ? (
+          <span className="topbar__sector">{THEMES.redline.code}</span>
         ) : (
           <span className="topbar__name">{profile.name}</span>
         )}
       </a>
 
-      <nav className="topbar__nav" aria-label="Main" hidden={underworks}>
+      <nav className="topbar__nav" aria-label="Main" hidden={redline}>
         <ul>
           {SECTION_IDS.map((id) => (
             <li key={id}>
@@ -126,20 +126,20 @@ export function TopBar() {
 
       <div className="topbar__tools">
         <LangSwitch />
-        {underworks ? (
+        {redline ? (
           <button
             type="button"
             className="topbar__surface"
-            onClick={returnToSurface}
+            onClick={leaveTrack}
             disabled={Boolean(traveling)}
-            aria-label={t.underworks.surface}
+            aria-label={t.redline.leave}
           >
-            <ArrowUpIcon size={16} />
+            <ExitIcon size={16} />
             <span className="topbar__surface-long" aria-hidden="true">
-              {t.underworks.surface}
+              {t.redline.leave}
             </span>
             <span className="topbar__surface-short" aria-hidden="true">
-              {t.underworks.surfaceShort}
+              {t.redline.leaveShort}
             </span>
           </button>
         ) : (

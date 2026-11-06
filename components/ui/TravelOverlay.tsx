@@ -22,12 +22,12 @@ export function TravelOverlay() {
   if (!traveling) return null;
   const info = t.themes[traveling];
   const config = THEMES[traveling];
-  // Going down into the Underworks, or climbing back out of it
+  // Onto the track, or off it
   const label =
-    traveling === "underworks"
-      ? t.hud.descending
-      : travelOrigin === "underworks"
-        ? t.hud.surfacing
+    traveling === "redline"
+      ? t.hud.toTrack
+      : travelOrigin === "redline"
+        ? t.hud.fromTrack
         : t.hud.traveling;
 
   return (

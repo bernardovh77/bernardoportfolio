@@ -5,7 +5,7 @@ A cyberpunk portfolio built with Next.js, React Three Fiber and GSAP. The backgr
 - **Megacity**: rain, towers, neon signs and flying traffic over a wet street
 - **Synth Desert**: a neon highway into a striped sun, with wireframe mountains
 - **Data Ocean**: glowing waves, code-rain towers and a holographic moon
-- **The Underworks**: a foundry shaft under the city, full of smog, gears, sparks and failing lights, with a pool of molten metal at the bottom. It is a separate place with its own page: only the projects still under development, each one next to its construction site
+- **Redline**: a night race circuit with floodlights, a grandstand and cars lapping as light trails, under a holographic tachometer that revs as you scroll. It is a separate place with its own page, one lap of the track: the car in the garage, what I'm into about cars, and REV-BENCH, the project on the dyno. It has no music for now: the song fades out while you're there
 
 The site is available in English and Portuguese.
 
@@ -22,7 +22,7 @@ Then open http://localhost:3000.
 
 Almost everything you will want to change lives in **`lib/content.ts`**: your intro, bio, skills, projects, journey and links. Each text has an English (`en`) and Portuguese (`pt`) version.
 
-Projects you are still building go in `wipProjects` (same file). Each one has a status (`blueprint`, `building` or `testing`), a progress from 0 to 100, an ETA and a drawing (`tower`, `dome` or `gear`). Each project gets its own work order in the Underworks and its own construction site in the 3D shaft, built as far as its progress. Add or remove projects and the shaft grows or shrinks with them.
+Redline's page reads from the same file: `garage` (your car, its specs and mods), `carInterests` (the telemetry cards) and `revBench` (the project on the dyno: its status, how many roadmap stages are done, the phases ahead, what works today and its dyno numbers). Update `revBench.stages` and `revBench.updated` as the project moves along. To give Redline a song, set `redlineMusic.src` to a file in `public/music/`.
 
 Interface text (menu labels, buttons, the terminal) is in `lib/i18n.ts`.
 
@@ -32,11 +32,11 @@ Interface text (menu labels, buttons, the terminal) is in `lib/i18n.ts`.
 | --- | --- |
 | `app/page.tsx` | Puts the page together |
 | `app/globals.css` | All the styles, including the colors of each district |
-| `components/sections/` | Hero, About, Skills, Work, Journey, Contact, Footer, and the Underworks page |
+| `components/sections/` | Hero, About, Skills, Work, Journey, Contact, Footer, and the Redline page |
 | `components/ui/` | Top bar, district switcher, boot screen, cursor, HUD |
-| `components/three/` | The 3D world and the four district scenes (the Underworks is split into `scenes/underworks/`) |
+| `components/three/` | The 3D world and the four district scenes (Redline's circuit is in `scenes/redline/`) |
 | `lib/themes.ts` | District colors used by the 3D scenes |
-| `lib/underworks.ts` | Layout shared by the Underworks page and its 3D shaft |
+| `lib/redline.ts` | Redline's lap: the stops the page and the 3D camera share, and the engine behind the tachometer |
 | `lib/drive.ts`, `lib/car/` | The secret car ride: its states, the cabin layout, the console OS, its games and DOOM |
 | `components/drive/` | The page side of the road sign, and everything shown on top of the 3D view while riding |
 | `components/three/scenes/desert/` | The 3D car (cabin, mirrors), the traffic and the EXIT 77 sign |

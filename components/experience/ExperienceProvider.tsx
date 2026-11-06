@@ -30,8 +30,8 @@ type ExperienceValue = {
   /** Where the current travel started */
   travelOrigin: ThemeId | null;
   travelTo: (theme: ThemeId) => void;
-  /** Leaves the Underworks for the last district visited on the surface */
-  returnToSurface: () => void;
+  /** Leaves Redline for the last of the other districts visited */
+  leaveTrack: () => void;
   setLang: (lang: Lang) => void;
 };
 
@@ -41,9 +41,9 @@ function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-/** The Underworks has its own page, so crossing to or from it starts at the top. */
+/** Redline has its own page, so crossing to or from it starts at the top. */
 function changesPage(from: ThemeId, to: ThemeId) {
-  return (from === "underworks") !== (to === "underworks");
+  return (from === "redline") !== (to === "redline");
 }
 
 function isTypingTarget(target: EventTarget | null) {
@@ -61,10 +61,10 @@ export function ExperienceProvider({ children }: { children: ReactNode }) {
   const [travelOrigin, setTravelOrigin] = useState<ThemeId | null>(null);
   const timers = useRef<number[]>([]);
   const travelingRef = useRef<ThemeId | null>(null);
-  const surfaceRef = useRef<ThemeId>("city");
+  const lastMainRef = useRef<ThemeId>("city");
 
   useEffect(() => {
-    if (prefs.theme !== "underworks") surfaceRef.current = prefs.theme;
+    if (prefs.theme !== "redline") lastMainRef.current = prefs.theme;
   }, [prefs.theme]);
 
   // React's dev remount can clear attributes set by the inline script, so re-apply them.
@@ -118,7 +118,7 @@ export function ExperienceProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const returnToSurface = useCallback(() => travelTo(surfaceRef.current), [travelTo]);
+  const leaveTrack = useCallback(() => travelTo(lastMainRef.current), [travelTo]);
 
   const setLang = useCallback((lang: Lang) => {
     preferencesStore.set({ lang });
@@ -147,10 +147,10 @@ export function ExperienceProvider({ children }: { children: ReactNode }) {
       traveling,
       travelOrigin,
       travelTo,
-      returnToSurface,
+      leaveTrack,
       setLang,
     }),
-    [prefs, traveling, travelOrigin, travelTo, returnToSurface, setLang],
+    [prefs, traveling, travelOrigin, travelTo, leaveTrack, setLang],
   );
 
   return <ExperienceContext.Provider value={value}>{children}</ExperienceContext.Provider>;

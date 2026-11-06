@@ -84,6 +84,32 @@ export function ArrowDownIcon(props: IconProps) {
   );
 }
 
+/** Out of the door: leaving the track. */
+export function ExitIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M10 4H5v16h5" />
+      <path d="M14 8l4 4-4 4M18 12H9" />
+    </svg>
+  );
+}
+
+/** A chequered flag. */
+export function FlagIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 21V4" />
+      <path d="M5 4h14v10H5" />
+      <path d="M5 9h14M9.7 4v10M14.3 4v10" />
+      <path
+        d="M5 4h4.7v5H5zM14.3 4H19v5h-4.7zM9.7 9h4.6v5H9.7z"
+        fill="currentColor"
+        stroke="none"
+      />
+    </svg>
+  );
+}
+
 export function ArrowUpIcon(props: IconProps) {
   return (
     <svg {...base(props)}>
@@ -144,14 +170,15 @@ export function DistrictIcon({ theme, ...props }: IconProps & { theme: ThemeId }
       </svg>
     );
   }
-  if (theme === "underworks") {
-    // A striped road barrier with a warning light on top
+  if (theme === "redline") {
+    // A tachometer with the needle in the red
     return (
       <svg {...base(props)}>
-        <path d="M3 10h18v4.5H3z" />
-        <path d="m8 10-2.6 4.5M13 10l-2.6 4.5M18 10l-2.6 4.5" />
-        <path d="M6 14.5V20M18 14.5V20M4.5 20h3M16.5 20h3" />
-        <path d="M10.2 10V8.4a1.8 1.8 0 0 1 3.6 0V10M12 3.5v1.2M8.6 5l.8.8M15.4 5l-.8.8" />
+        <path d="M4.2 17.5a9 9 0 1 1 15.6 0" />
+        <path d="M17.6 9.2l1.6-1.2M19.6 13h1.6" strokeWidth="2.4" />
+        <path d="M12 14l4.6-3.4" />
+        <circle cx="12" cy="14" r="1.3" />
+        <path d="M8 20h8" />
       </svg>
     );
   }
