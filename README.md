@@ -5,7 +5,7 @@ A cyberpunk portfolio built with Next.js, React Three Fiber and GSAP. The backgr
 - **Megacity**: rain, towers, neon signs and flying traffic over a wet street
 - **Synth Desert**: a neon highway into a striped sun, with wireframe mountains
 - **Data Ocean**: glowing waves, code-rain towers and a holographic moon
-- **Redline**: a night race circuit with floodlights, a grandstand and cars lapping as light trails, under a holographic tachometer that revs as you scroll. It is a separate place with its own page, one lap of the track: the car in the garage, what I'm into about cars, and REV-BENCH, the project on the dyno. It has no music for now: the song fades out while you're there
+- **Redline**: a night race circuit with floodlights, a grandstand and cars lapping as light trails. It is a separate place with its own page, one lap of the track, with REV-BENCH, the project on the dyno. It has no music for now: the song fades out while you're there
 
 The site is available in English and Portuguese.
 
@@ -22,7 +22,7 @@ Then open http://localhost:3000.
 
 Almost everything you will want to change lives in **`lib/content.ts`**: your intro, bio, skills, projects, journey and links. Each text has an English (`en`) and Portuguese (`pt`) version.
 
-Redline's page reads from the same file: `garage` (your car, its specs and mods), `carInterests` (the telemetry cards) and `revBench` (the project on the dyno: its status, how many roadmap stages are done, the phases ahead, what works today and its dyno numbers). Update `revBench.stages` and `revBench.updated` as the project moves along. To give Redline a song, set `redlineMusic.src` to a file in `public/music/`.
+Redline's page reads `revBench` from the same file (the project on the dyno: its status, how many roadmap stages are done, the phases ahead, what works today and its dyno numbers). Update `revBench.stages` and `revBench.updated` as the project moves along. To give Redline a song, set `redlineMusic.src` to a file in `public/music/`.
 
 Interface text (menu labels, buttons, the terminal) is in `lib/i18n.ts`.
 
@@ -36,7 +36,7 @@ Interface text (menu labels, buttons, the terminal) is in `lib/i18n.ts`.
 | `components/ui/` | Top bar, district switcher, boot screen, cursor, HUD |
 | `components/three/` | The 3D world and the four district scenes (Redline's circuit is in `scenes/redline/`) |
 | `lib/themes.ts` | District colors used by the 3D scenes |
-| `lib/redline.ts` | Redline's lap: the stops the page and the 3D camera share, and the engine behind the tachometer |
+| `lib/redline.ts` | Redline's lap: the stops the page and the 3D camera share |
 | `lib/drive.ts`, `lib/car/` | The secret car ride: its states, the cabin layout, the console OS, its games and DOOM |
 | `components/drive/` | The page side of the road sign, and everything shown on top of the 3D view while riding |
 | `components/three/scenes/desert/` | The 3D car (cabin, mirrors), the traffic and the EXIT 77 sign |

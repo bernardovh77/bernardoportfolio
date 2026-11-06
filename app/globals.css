@@ -1635,76 +1635,6 @@ html.is-locked {
     margin-top: 28px;
   }
 
-  /* Live readout of the engine behind the tachometer in the sky */
-  .rl-live {
-    display: grid;
-    gap: 10px;
-    width: min(420px, 100%);
-    margin-top: 26px;
-    padding: 14px 16px 12px;
-    border: 1px solid var(--line);
-    border-left: 3px solid var(--a);
-    background: color-mix(in oklab, var(--void) 70%, transparent);
-    backdrop-filter: blur(8px);
-  }
-  .rl-live__bar {
-    position: relative;
-    display: block;
-    height: 8px;
-    overflow: hidden;
-    background:
-      linear-gradient(
-          90deg,
-          transparent calc(var(--redline) * 100%),
-          rgb(255 46 67 / 0.35) calc(var(--redline) * 100%)
-        ),
-      rgb(255 255 255 / 0.06);
-  }
-  .rl-live__bar span {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, var(--signal) 0 62%, var(--b) 62% 84%, var(--a) 84%);
-    transform: scaleX(0.11);
-    transform-origin: left;
-  }
-  .rl-live[data-limiter] .rl-live__bar span {
-    animation: rl-limiter 0.12s steps(1, end) infinite;
-  }
-  .rl-live__readouts {
-    display: grid;
-    grid-template-columns: 1.4fr 0.8fr 1fr;
-    gap: 10px;
-  }
-  .rl-live__readouts div {
-    display: grid;
-    gap: 2px;
-  }
-  .rl-live__readouts dt {
-    color: var(--haze);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-  .rl-live__readouts dd {
-    color: #fff4f5;
-    font-size: 22px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.1;
-  }
-  .rl-live__gear {
-    color: var(--b) !important;
-  }
-  .rl-live[data-limiter] .rl-live__gear {
-    color: var(--a) !important;
-    text-shadow: 0 0 12px var(--a);
-  }
-  .rl-live__hint {
-    color: var(--haze);
-    font-size: 11px;
-    letter-spacing: 0.04em;
-  }
-
   /* One section per stop on the lap */
   .rl-section {
     position: relative;
@@ -1775,207 +1705,6 @@ html.is-locked {
     font-weight: 600;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-  }
-
-  /* The garage */
-  .rl-garage__layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 0 30px;
-    align-items: start;
-    margin-top: 8px;
-  }
-  .rl-garage__car {
-    margin-top: 18px;
-  }
-  .rl-car {
-    display: block;
-    width: 100%;
-    max-width: 330px;
-    height: auto;
-    margin-inline: auto;
-    overflow: visible;
-    fill: none;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-  .rl-car__ground {
-    stroke: rgb(255 255 255 / 0.14);
-    stroke-dasharray: 2 6;
-  }
-  .rl-car__body {
-    stroke: var(--a);
-    stroke-width: 2.2;
-    fill: rgb(255 46 67 / 0.05);
-    filter: drop-shadow(0 0 6px rgb(255 46 67 / 0.6));
-  }
-  .rl-car__glass {
-    stroke: color-mix(in oklab, var(--a) 60%, #fff);
-    stroke-width: 1.4;
-    fill: rgb(255 255 255 / 0.04);
-  }
-  .rl-car__line {
-    stroke: rgb(255 255 255 / 0.28);
-    stroke-width: 1.2;
-  }
-  .rl-car__light {
-    stroke-width: 3.2;
-  }
-  .rl-car__light--head {
-    stroke: #fff3e0;
-    filter: drop-shadow(0 0 5px #fff3e0);
-  }
-  .rl-car__light--tail {
-    stroke: var(--a);
-    filter: drop-shadow(0 0 5px var(--a));
-  }
-  .rl-car__wheel circle {
-    stroke: color-mix(in oklab, var(--a) 70%, #fff);
-    stroke-width: 1.6;
-    fill: #0b0609;
-  }
-  .rl-car__wheel circle:nth-child(2) {
-    stroke: rgb(255 255 255 / 0.4);
-    stroke-dasharray: 3 4;
-    fill: none;
-  }
-  .rl-section[data-inview] .rl-car__wheel circle:nth-child(2) {
-    animation: rl-wheel 1.4s linear infinite;
-  }
-  .rl-car__tag path,
-  .rl-car__tag circle {
-    stroke: var(--b);
-    stroke-width: 1.2;
-  }
-  .rl-car__tag circle {
-    fill: var(--b);
-  }
-  .rl-car__tag text {
-    fill: var(--b);
-    font-family: var(--font-ui);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-  }
-  .rl-car__scan {
-    fill: var(--a);
-    opacity: 0;
-    filter: drop-shadow(0 0 8px var(--a));
-  }
-  .rl-section[data-inview] .rl-car__scan {
-    animation: rl-scan 2.8s 0.5s var(--ease-in-out) both;
-  }
-  .rl-garage__name {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 6px 12px;
-    margin-top: 8px;
-    color: var(--haze);
-    font-size: 13px;
-  }
-  .rl-garage__name strong {
-    color: #fff4f5;
-    font-family: var(--font-head);
-    font-size: 24px;
-    font-style: italic;
-    font-weight: 800;
-    font-stretch: 85%;
-  }
-  .rl-garage__sheets {
-    display: grid;
-  }
-  .rl-specs {
-    display: grid;
-    gap: 8px;
-  }
-  .rl-specs div {
-    display: grid;
-    gap: 2px;
-    padding-bottom: 8px;
-    border-bottom: 1px dashed rgb(255 255 255 / 0.1);
-  }
-  .rl-specs dt {
-    color: var(--haze);
-    font-size: 11px;
-  }
-  .rl-specs dd {
-    color: var(--ink);
-    font-size: 13.5px;
-  }
-  .rl-mods {
-    display: grid;
-    gap: 8px;
-  }
-  .rl-mods li {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 10px;
-    color: var(--ink);
-    font-size: 13.5px;
-  }
-  .rl-mods__tag {
-    min-width: 78px;
-    padding: 3px 6px;
-    color: var(--haze);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-align: center;
-    text-transform: uppercase;
-    border: 1px solid rgb(255 255 255 / 0.16);
-  }
-  .rl-mods li[data-status="done"] .rl-mods__tag {
-    color: #06140c;
-    background: var(--signal);
-    border-color: var(--signal);
-  }
-  .rl-mods li[data-status="next"] .rl-mods__tag {
-    color: var(--b);
-    border-color: var(--b);
-  }
-  .rl-garage__rule {
-    margin-top: 18px;
-    padding-top: 14px;
-    color: var(--haze);
-    font-size: 12.5px;
-    border-top: 1px solid var(--line);
-  }
-
-  /* Telemetry: what I'm into */
-  .rl-interests {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 20px;
-  }
-  .rl-interests li {
-    padding: 14px 14px 13px;
-    border: 1px solid rgb(255 255 255 / 0.07);
-    border-left: 2px solid var(--a);
-    background: rgb(0 0 0 / 0.22);
-  }
-  .rl-section[data-inview] .rl-interests li {
-    animation: rl-tile-in 0.6s calc(0.25s + var(--i) * 0.07s) var(--ease-out) both;
-  }
-  .rl-interests__code {
-    color: var(--b);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-  }
-  .rl-interests h3 {
-    margin-top: 6px;
-    color: #fff4f5;
-    font-family: var(--font-head);
-    font-size: 17px;
-    font-weight: 700;
-    font-stretch: 90%;
-    line-height: 1.15;
-  }
-  .rl-interests p {
-    margin-top: 6px;
-    color: var(--haze);
-    font-size: 12.5px;
-    line-height: 1.55;
   }
 
   /* On the dyno: REV-BENCH */
@@ -3354,44 +3083,10 @@ html.is-locked {
   }
 }
 
-@keyframes rl-limiter {
-  50% {
-    opacity: 0.4;
-  }
-}
-
 @keyframes rl-card-in {
   to {
     opacity: 1;
     translate: 0 0;
-  }
-}
-
-@keyframes rl-tile-in {
-  from {
-    opacity: 0;
-    translate: 0 10px;
-  }
-}
-
-@keyframes rl-wheel {
-  to {
-    stroke-dashoffset: -14;
-  }
-}
-
-@keyframes rl-scan {
-  0% {
-    opacity: 0;
-    transform: translateX(0);
-  }
-  12%,
-  88% {
-    opacity: 0.85;
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(396px);
   }
 }
 
@@ -3734,12 +3429,8 @@ html.is-locked {
   .rl-section {
     padding-bottom: 170px;
   }
-  .rl-dyno__grid,
-  .rl-garage__layout {
+  .rl-dyno__grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .rl-interests {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .rl-sectors {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3796,9 +3487,6 @@ html.is-locked {
   .rl-card {
     padding: 30px 18px 22px;
   }
-  .rl-interests {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .rl-progress {
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -3806,9 +3494,7 @@ html.is-locked {
     grid-column: 1 / -1;
     grid-row: 2;
   }
-  .rl-live__readouts dd {
-    font-size: 19px;
-  }
+
   .music {
     bottom: 98px;
   }

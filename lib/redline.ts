@@ -6,17 +6,11 @@ import { world } from "./world";
  * camera drives from one to the next as the page scrolls.
  */
 
-/** The page's sections, in lap order: the grid, the garage, the telemetry, the dyno, the finish. */
-export const REDLINE_SECTION_IDS = [
-  "rl-start",
-  "rl-garage",
-  "rl-telemetry",
-  "rl-dyno",
-  "rl-finish",
-] as const;
+/** The page's sections, in lap order: the grid, the project on the dyno, the finish. */
+export const REDLINE_SECTION_IDS = ["rl-start", "rl-dyno", "rl-finish"] as const;
 
 /** How far around the lap (0..1) the camera stops for each section. */
-export const LAP_STOPS = [0, 0.2, 0.44, 0.68, 1] as const;
+export const LAP_STOPS = [0, 0.5, 1] as const;
 
 function usableKnots(knots: number[]) {
   if (knots.length !== LAP_STOPS.length) return null;
@@ -57,20 +51,3 @@ export function lapPosition(scroll: number): { lap: number; segment: number; t: 
     t: k,
   };
 }
-
-/**
- * Live readings of the engine behind the holographic tachometer. Scrolling is the
- * throttle: the scene revs it and shifts gears, the page shows the numbers.
- */
-export const engine = {
-  rpm: 900,
-  /** 0 is neutral */
-  gear: 0,
-  /** km/h, from how fast the camera goes around the lap */
-  speed: 0,
-  /** True while the engine bounces off the rev limiter */
-  limiter: false,
-};
-
-export const REDLINE_RPM = 7800;
-export const MAX_RPM = 8000;
